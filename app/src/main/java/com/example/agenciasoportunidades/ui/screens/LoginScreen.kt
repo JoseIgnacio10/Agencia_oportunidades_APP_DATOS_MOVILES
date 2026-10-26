@@ -1,5 +1,10 @@
 package com.example.agenciasoportunidades.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -105,8 +110,12 @@ fun LoginScreen(
             esClave = true
         )
 
-        // Error general: aparece solo después de consultar la base de datos
-        estado.mensajeError?.let { mensaje ->
+        // Error general: aparece (animado) solo después de consultar la base de datos
+        AnimatedVisibility(
+            visible = estado.mensajeError != null,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -114,7 +123,7 @@ fun LoginScreen(
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Text(
-                        text = "  $mensaje",
+                        text = "  ${estado.mensajeError.orEmpty()}",
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodyMedium
                     )

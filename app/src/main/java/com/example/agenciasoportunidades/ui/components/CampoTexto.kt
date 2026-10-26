@@ -3,6 +3,13 @@ package com.example.agenciasoportunidades.ui.components
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Visibility
@@ -51,7 +58,12 @@ fun CampoTexto(
         // Ícono rojo de error solo cuando el ViewModel informa un error
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (error != null) {
+                // El ícono de error "aparece" creciendo, para llamar la atención sin ser brusco
+                AnimatedVisibility(
+                    visible = error != null,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
                     Icon(
                         Icons.Filled.Error,
                         contentDescription = "Error",
@@ -72,8 +84,16 @@ fun CampoTexto(
         visualTransformation = if (esClave && !claveVisible) PasswordVisualTransformation()
         else VisualTransformation.None,
         isError = error != null,
-        // Mensaje de error bajo el campo
-        supportingText = { if (error != null) Text(error) },
+        // Mensaje de error bajo el campo: se despliega y se esconde con animación
+        supportingText = {
+            AnimatedVisibility(
+                visible = error != null,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Text(error.orEmpty())
+            }
+        },
         keyboardOptions = keyboardOptions,
         singleLine = singleLine,
         modifier = modifier.fillMaxWidth()
