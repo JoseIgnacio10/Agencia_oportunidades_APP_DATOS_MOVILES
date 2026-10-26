@@ -2,7 +2,7 @@ package com.example.agenciasoportunidades.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-
+// Paleta Elegante - Agencia Atenas (Material 3)
 val AzulAtenasPrimary = Color(0xFF0F172A)
 val AzulAtenasSecondary = Color(0xFF2563EB)
 val AzulAtenasTertiary = Color(0xFF0EA5E9)
