@@ -14,6 +14,8 @@ Proyecto de la **Evaluación Parcial 2** · DSY1105 Desarrollo de Aplicaciones M
 
 ## Funcionalidades implementadas
 
+- **Login con cuenta ficticia**: validación de correo y clave por campo, aviso si las credenciales son
+  incorrectas, nombre del usuario en la barra superior y botón para cerrar sesión.
 - **Lista de oportunidades** con buscador por título, organización, tipo de evento o ubicación.
 - **Formulario de nueva oportunidad** con validación por campo: cada error muestra un ícono y un mensaje,
   y el botón Guardar se habilita solo cuando el formulario es válido.
@@ -26,14 +28,15 @@ Proyecto de la **Evaluación Parcial 2** · DSY1105 Desarrollo de Aplicaciones M
 - **Permisos**: la cámara se pide en tiempo de ejecución; si el usuario la rechaza, la app lo informa y
   sigue funcionando.
 - **Navegación con transiciones animadas** entre pantallas.
+- **Animaciones de retroalimentación**: los íconos y mensajes de error aparecen y desaparecen animados.
 
 ## Arquitectura (MVVM)
 
 ```
 app/src/main/java/com/example/agenciasoportunidades/
-├── data/        Room: OportunidadEntity, OportunidadDao, AppDatabase, OportunidadRepository
-├── model/       Estados de pantalla (OportunidadFormState, OportunidadListState) y DatosQrEvento
-├── viewmodel/   OportunidadViewModel (validaciones, guardado, búsqueda) y ViewModelFactory
+├── data/        Room: entidades, DAOs y repositorios de oportunidades y usuarios (AppDatabase v2)
+├── model/       Estados de pantalla (OportunidadFormState, OportunidadListState, LoginUiState) y DatosQrEvento
+├── viewmodel/   OportunidadViewModel, LoginViewModel (validaciones y sesión) y ViewModelFactory
 ├── device/      Recursos nativos: CameraManager y QrScannerManager
 ├── navigation/  Rutas y NavHost con animaciones (NavGraph)
 └── ui/          Pantallas (screens), componentes reutilizables (components) y tema Material 3 (theme)
@@ -53,15 +56,14 @@ ML Kit Barcode Scanning
    ```
    git clone https://github.com/JoseIgnacio10/Agencia_oportunidades_APP_DATOS_MOVILES.git
    ```
-  
 2. Abrir la carpeta en **Android Studio** y esperar a que termine el **Gradle Sync**.
 3. Elegir un emulador o un celular con **Android 7.0 o superior** (API 24) con depuración USB activada.
 4. Pulsar **▶ Run**.
+5. Ingresar con la cuenta de prueba (ficticia):
 
-5. Clonar trello
-```
-   https://trello.com/b/ghVv6rSc
-   ```
+   | Correo | Clave |
+   |---|---|
+   | `ejecutivo@agenciaficticia.cl` | `Agencia2026` |
 
 ## Cómo probar el lector QR
 
@@ -88,5 +90,5 @@ fecha=15/11/2026
 ## Organización del trabajo
 
 - Cada funcionalidad se desarrolló en una rama `feature/*` y se unió a `main` mediante Pull Request.
-- Planificación de tareas en Trello: _enlace por agregar_.
+- Planificación de tareas en Trello: [tablero del proyecto](https://trello.com/b/ghVv6rSc).
 - Todos los nombres, organizaciones y datos usados son **ficticios**, como exige el caso.
