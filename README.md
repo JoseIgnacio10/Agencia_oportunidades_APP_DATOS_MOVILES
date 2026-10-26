@@ -53,9 +53,15 @@ ML Kit Barcode Scanning
    ```
    git clone https://github.com/JoseIgnacio10/Agencia_oportunidades_APP_DATOS_MOVILES.git
    ```
+  
 2. Abrir la carpeta en **Android Studio** y esperar a que termine el **Gradle Sync**.
 3. Elegir un emulador o un celular con **Android 7.0 o superior** (API 24) con depuración USB activada.
 4. Pulsar **▶ Run**.
+
+5. Clonar trello
+```
+   https://trello.com/b/ghVv6rSc
+   ```
 
 ## Cómo probar el lector QR
 
