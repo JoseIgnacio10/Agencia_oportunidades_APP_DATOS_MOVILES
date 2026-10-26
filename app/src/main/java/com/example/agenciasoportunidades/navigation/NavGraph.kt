@@ -4,12 +4,15 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.agenciasoportunidades.ui.screens.FormularioScreen
 import com.example.agenciasoportunidades.ui.screens.ListaScreen
+import com.example.agenciasoportunidades.ui.screens.QrScannerScreen
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 
 /**
@@ -18,6 +21,7 @@ import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 sealed class Screen(val route: String) {
     object Lista : Screen("lista_oportunidades")
     object Formulario : Screen("formulario_oportunidad")
+    object EscanearQr : Screen("escanear_qr")
 }
 
 /**
@@ -73,7 +77,28 @@ fun AppNavigation(
             FormularioScreen(
                 viewModel = viewModel,
                 onVolver = { navController.popBackStack() },
-                onGuardado = { navController.popBackStack() }
+                onGuardado = { navController.popBackStack() },
+                onEscanearQr = { navController.navigate(Screen.EscanearQr.route) }
+            )
+        }
+
+        // Lector QR (recurso nativo 2): al leer un código vuelve al formulario ya completado
+        composable(
+            route = Screen.EscanearQr.route,
+            enterTransition = { fadeIn(animationSpec = tween(350)) },
+            exitTransition = { fadeOut(animationSpec = tween(350)) }
+        ) {
+            val context = LocalContext.current
+            QrScannerScreen(
+                onQrLeido = { texto ->
+                    // El ViewModel interpreta el QR; aquí solo se informa el resultado
+                    val cargado = viewModel.cargarDesdeQr(texto)
+                    val mensaje = if (cargado) "Datos del evento cargados desde el QR"
+                    else "Este QR no corresponde a un evento"
+                    Toast.makeText(context, mensaje, Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                },
+                onVolver = { navController.popBackStack() }
             )
         }
     }
