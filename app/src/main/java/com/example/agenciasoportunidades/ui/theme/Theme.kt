@@ -1,5 +1,6 @@
 package com.example.agenciasoportunidades.ui.theme
 
+import android.os.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -20,7 +21,11 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun AgenciasOportunidadesTheme(content: @Composable () -> Unit) {
+fun AgenciasOportunidadesTheme(
+    // Desactivamos dynamicColor para que SIEMPRE aplique tus colores corporativos
+    dynamicColor: Boolean = false,
+    content: @Composable () -> Unit
+) {
     MaterialTheme(
         colorScheme = LightColorScheme,
         typography = Typography,

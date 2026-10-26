@@ -19,7 +19,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Creación del ViewModel usando el ViewModelFactory con el Context de la app
         val factory = ViewModelFactory(applicationContext)
         val viewModel = ViewModelProvider(this, factory)[OportunidadViewModel::class.java]
 
