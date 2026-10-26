@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Configuracion local de Android Studio (cada PC genera la suya)
+.idea/
