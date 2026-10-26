@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.agenciasoportunidades.data.OportunidadEntity
 import com.example.agenciasoportunidades.data.OportunidadRepository
+import com.example.agenciasoportunidades.model.DatosQrEvento
 import com.example.agenciasoportunidades.model.OportunidadFormState
 import com.example.agenciasoportunidades.model.OportunidadListState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,6 +127,20 @@ class OportunidadViewModel(
    fotoError = if (nuevaRutaFoto == null) "Debe adjuntar una foto de evidencia" else null
   )
   validarFormularioGlobal()
+ }
+
+ // Autocompletar desde un QR (recurso nativo 2).
+ // Reutiliza las mismas funciones de cada campo, así los datos del QR pasan por las mismas validaciones.
+ // Devuelve false si el QR no corresponde a un evento.
+ fun cargarDesdeQr(textoQr: String): Boolean {
+  val datos = DatosQrEvento.desdeTexto(textoQr) ?: return false
+  datos.titulo?.let { onTituloChanged(it) }
+  datos.organizacion?.let { onOrganizacionChanged(it) }
+  datos.tipoEvento?.let { onTipoEventoChanged(it) }
+  datos.publicoObjetivo?.let { onPublicoObjetivoChanged(it) }
+  datos.ubicacion?.let { onUbicacionChanged(it) }
+  datos.fecha?.let { onFechaChanged(it) }
+  return true
  }
 
  // Validación global
