@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import com.example.agenciasoportunidades.navigation.AppNavigation
 import com.example.agenciasoportunidades.ui.theme.AgenciasOportunidadesTheme
+import com.example.agenciasoportunidades.viewmodel.LoginViewModel
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 import com.example.agenciasoportunidades.viewmodel.ViewModelFactory
 
@@ -21,6 +22,8 @@ class MainActivity : ComponentActivity() {
 
         val factory = ViewModelFactory(applicationContext)
         val viewModel = ViewModelProvider(this, factory)[OportunidadViewModel::class.java]
+        // Sesión del usuario: se comparte entre el login y la lista (para cerrar sesión)
+        val loginViewModel = ViewModelProvider(this, factory)[LoginViewModel::class.java]
 
         setContent {
             AgenciasOportunidadesTheme {
@@ -31,7 +34,8 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     AppNavigation(
                         navController = navController,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        loginViewModel = loginViewModel
                     )
                 }
             }

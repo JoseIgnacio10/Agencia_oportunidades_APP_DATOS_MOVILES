@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.EventBusy
@@ -42,7 +43,9 @@ import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 @Composable
 fun ListaScreen(
     viewModel: OportunidadViewModel,
-    onNuevaOportunidad: () -> Unit
+    onNuevaOportunidad: () -> Unit,
+    nombreUsuario: String? = null,
+    onCerrarSesion: (() -> Unit)? = null
 ) {
     // collectAsState: cada vez que Room cambia, la lista se vuelve a dibujar sola
     val listState by viewModel.listState.collectAsState()
@@ -51,7 +54,22 @@ fun ListaScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Oportunidades") },
+                title = {
+                    Column {
+                        Text("Oportunidades")
+                        // Identificación del usuario con sesión iniciada
+                        nombreUsuario?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                },
+                actions = {
+                    onCerrarSesion?.let { cerrar ->
+                        IconButton(onClick = cerrar) {
+                            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
