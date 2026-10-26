@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,7 +77,8 @@ private val TIPOS_EVENTO = listOf(
 fun FormularioScreen(
     viewModel: OportunidadViewModel,
     onGuardado: () -> Unit,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    onEscanearQr: () -> Unit
 ) {
     val form by viewModel.formState.collectAsState()
     val capitalizar = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
@@ -105,6 +107,16 @@ fun FormularioScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            // Atajo en terreno: el QR del afiche del evento llena los campos (recurso nativo 2)
+            OutlinedButton(
+                onClick = onEscanearQr,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
+                Text("  Escanear QR del evento")
+            }
             CampoTexto(
                 valor = form.titulo,
                 onValorChange = viewModel::onTituloChanged,

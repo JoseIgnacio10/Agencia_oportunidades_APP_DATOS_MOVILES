@@ -1,6 +1,7 @@
 package com.example.agenciasoportunidades
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -13,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.agenciasoportunidades.ui.screens.FormularioScreen
 import com.example.agenciasoportunidades.ui.screens.ListaScreen
+import com.example.agenciasoportunidades.ui.screens.QrScannerScreen
 import com.example.agenciasoportunidades.ui.theme.AgenciasOportunidadesTheme
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 import com.example.agenciasoportunidades.viewmodel.ViewModelFactory
@@ -29,20 +31,37 @@ class MainActivity : ComponentActivity() {
 
                 // Conexión mínima entre pantallas para poder probarlas.
                 // Se reemplaza por el NavHost de navigation/ cuando esté la navegación.
-                var mostrarFormulario by rememberSaveable { mutableStateOf(false) }
+                var pantalla by rememberSaveable { mutableStateOf("lista") }
+                val context = LocalContext.current
 
-                if (mostrarFormulario) {
-                    // El botón "atrás" del teléfono vuelve a la lista
-                    BackHandler { mostrarFormulario = false }
-                    FormularioScreen(
+                when (pantalla) {
+                    "formulario" -> {
+                        // El botón "atrás" del teléfono vuelve a la lista
+                        BackHandler { pantalla = "lista" }
+                        FormularioScreen(
+                            viewModel = oportunidadViewModel,
+                            onGuardado = { pantalla = "lista" },
+                            onVolver = { pantalla = "lista" },
+                            onEscanearQr = { pantalla = "qr" }
+                        )
+                    }
+                    "qr" -> {
+                        BackHandler { pantalla = "formulario" }
+                        QrScannerScreen(
+                            onQrLeido = { texto ->
+                                // El ViewModel interpreta el QR; la pantalla solo informa el resultado
+                                val cargado = oportunidadViewModel.cargarDesdeQr(texto)
+                                val mensaje = if (cargado) "Datos del evento cargados desde el QR"
+                                else "Este QR no corresponde a un evento"
+                                Toast.makeText(context, mensaje, Toast.LENGTH_SHORT).show()
+                                pantalla = "formulario"
+                            },
+                            onVolver = { pantalla = "formulario" }
+                        )
+                    }
+                    else -> ListaScreen(
                         viewModel = oportunidadViewModel,
-                        onGuardado = { mostrarFormulario = false },
-                        onVolver = { mostrarFormulario = false }
-                    )
-                } else {
-                    ListaScreen(
-                        viewModel = oportunidadViewModel,
-                        onNuevaOportunidad = { mostrarFormulario = true }
+                        onNuevaOportunidad = { pantalla = "formulario" }
                     )
                 }
             }
