@@ -1,9 +1,20 @@
 package com.example.agenciasoportunidades.ui.screens
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
+import com.example.agenciasoportunidades.device.CameraManager
+import com.example.agenciasoportunidades.ui.components.FotoEvidencia
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -141,6 +152,12 @@ fun FormularioScreen(
                 placeholder = "dd/mm/aaaa"
             )
 
+            SeccionFoto(
+                fotoPath = form.fotoPath,
+                fotoError = form.fotoError,
+                onFotoTomada = viewModel::onFotoPathChanged
+            )
+
             // El botón se habilita solo cuando el ViewModel dice que el formulario es válido
             Button(
                 onClick = { viewModel.guardarOportunidad(onExito = onGuardado) },
@@ -161,6 +178,86 @@ fun FormularioScreen(
                 )
             }
         }
+    }
+}
+
+// Foto de evidencia con la cámara (recurso nativo 1).
+// Flujo: revisar permiso → pedirlo si falta → abrir la cámara → avisar la ruta al ViewModel.
+@Composable
+private fun SeccionFoto(
+    fotoPath: String?,
+    fotoError: String?,
+    onFotoTomada: (String?) -> Unit
+) {
+    val context = LocalContext.current
+    val cameraManager = remember(context) { CameraManager(context) }
+    // rememberSaveable: la ruta sobrevive si Android recrea la pantalla mientras la cámara está abierta
+    var rutaPendiente by rememberSaveable { mutableStateOf<String?>(null) }
+    var permisoDenegado by rememberSaveable { mutableStateOf(false) }
+
+    // Abre la app de cámara y espera el resultado (true = foto guardada)
+    val tomarFoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { guardada ->
+        if (guardada) {
+            onFotoTomada(rutaPendiente)
+        } else {
+            cameraManager.eliminarFoto(rutaPendiente) // canceló: el archivo vacío no sirve
+        }
+        rutaPendiente = null
+    }
+
+    fun abrirCamara() {
+        val archivo = cameraManager.crearArchivoFoto()
+        rutaPendiente = archivo.absolutePath
+        tomarFoto.launch(cameraManager.obtenerUri(archivo))
+    }
+
+    // Muestra el diálogo de permiso de Android
+    val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
+        permisoDenegado = !concedido
+        if (concedido) abrirCamara()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+        Text("Foto de evidencia (opcional)", style = MaterialTheme.typography.titleSmall)
+
+        if (fotoPath != null) {
+            FotoEvidencia(ruta = fotoPath)
+        }
+
+        OutlinedButton(
+            onClick = {
+                if (cameraManager.tienePermisoCamara()) abrirCamara()
+                else pedirPermiso.launch(Manifest.permission.CAMERA)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+            Text(if (fotoPath == null) "  Tomar foto" else "  Tomar otra foto")
+        }
+
+        // Retroalimentación si el usuario rechazó el permiso: la app sigue funcionando sin foto
+        if (permisoDenegado) {
+            MensajeAviso("Sin permiso de cámara no se puede tomar la foto. Puedes guardar la oportunidad sin foto o volver a intentarlo.")
+        }
+        if (fotoError != null) {
+            MensajeAviso(fotoError)
+        }
+    }
+}
+
+@Composable
+private fun MensajeAviso(texto: String) {
+    Row {
+        Icon(
+            Icons.Filled.Warning,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error
+        )
+        Text(
+            text = "  $texto",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
     }
 }
 
