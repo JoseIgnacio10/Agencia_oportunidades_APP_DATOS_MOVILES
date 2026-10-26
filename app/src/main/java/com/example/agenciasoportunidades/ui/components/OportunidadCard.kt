@@ -42,6 +42,10 @@ fun OportunidadCard(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
+        // Foto de evidencia arriba de la tarjeta, solo si la oportunidad tiene una
+        oportunidad.fotoPath?.let { ruta ->
+            FotoEvidencia(ruta = ruta, alto = 160.dp)
+        }
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
