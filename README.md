@@ -90,5 +90,5 @@ fecha=15/11/2026
 ## Organización del trabajo
 
 - Cada funcionalidad se desarrolló en una rama `feature/*` y se unió a `main` mediante Pull Request.
-- Planificación de tareas en Trello: [tablero del proyecto](https://trello.com/b/ghVv6rSc).
+- Planificación de tareas en Trello: [tablero del proyecto](https://trello.com/b/qd8zFsZx).
 - Todos los nombres, organizaciones y datos usados son **ficticios**, como exige el caso.
