@@ -17,8 +17,8 @@ Proyecto de la **Evaluación Parcial 2** · DSY1105 Desarrollo de Aplicaciones M
 - **Login con cuenta ficticia**: validación de correo y clave por campo, aviso si las credenciales son
   incorrectas, nombre del usuario en la barra superior y botón para cerrar sesión.
 - **Lista de oportunidades** con buscador por título, organización, tipo de evento o ubicación.
-- **Formulario de nueva oportunidad** con validación por campo: cada error muestra un ícono y un mensaje,
-  y el botón Guardar se habilita solo cuando el formulario es válido.
+- **Formulario de nueva oportunidad** con validación por campo al guardar: cada error muestra un ícono y
+  un mensaje, y se limpia apenas el usuario corrige el campo.
 - **Tipos de evento del caso**: evento corporativo, feria empresarial, actividad municipal, jornada de
   beneficios, feria institucional, actividad de trabajadores, activación comercial y otra instancia.
 - **Persistencia local con Room**: las oportunidades se mantienen al cerrar y volver a abrir la app.
@@ -34,16 +34,20 @@ Proyecto de la **Evaluación Parcial 2** · DSY1105 Desarrollo de Aplicaciones M
 
 ```
 app/src/main/java/com/example/agenciasoportunidades/
-├── data/        Room: entidades, DAOs y repositorios de oportunidades y usuarios (AppDatabase v2)
-├── model/       Estados de pantalla (OportunidadFormState, OportunidadListState, LoginUiState) y DatosQrEvento
-├── viewmodel/   OportunidadViewModel, LoginViewModel (validaciones y sesión) y ViewModelFactory
-├── device/      Recursos nativos: CameraManager y QrScannerManager
-├── navigation/  Rutas y NavHost con animaciones (NavGraph)
-└── ui/          Pantallas (screens), componentes reutilizables (components) y tema Material 3 (theme)
+├── MainActivity.kt
+├── model/
+│   ├── LoginUiState.kt, LoginErrores.kt
+│   ├── OportunidadUiState.kt, OportunidadErrores.kt
+│   └── data/local/   Room: OportunidadEntity, UsuarioEntity, sus DAO y AppDatabase
+├── viewmodel/        LoginViewModel y OportunidadViewModel (validaciones, sesión y acceso a Room)
+├── navigation/       AppNavigation: crea los ViewModels y define las rutas con animaciones
+└── ui/
+    ├── screens/      LoginScreen, ListaScreen, FormularioScreen (cámara) y QrScannerScreen (lector QR)
+    └── theme/        Tema Material 3
 ```
 
-Las pantallas solo muestran el estado y avisan las acciones del usuario; la validación vive en el
-ViewModel y el acceso a datos en el repositorio.
+Cada pantalla recibe el `navController` y su ViewModel, lee el `estado` y solo avisa las acciones del
+usuario. La validación (`validarFormulario`) y el guardado en Room viven en el ViewModel.
 
 ## Tecnologías
 

@@ -1,188 +1,225 @@
 package com.example.agenciasoportunidades.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.agenciasoportunidades.data.OportunidadEntity
-import com.example.agenciasoportunidades.data.OportunidadRepository
-import com.example.agenciasoportunidades.model.DatosQrEvento
-import com.example.agenciasoportunidades.model.OportunidadFormState
-import com.example.agenciasoportunidades.model.OportunidadListState
+import com.example.agenciasoportunidades.model.OportunidadErrores
+import com.example.agenciasoportunidades.model.OportunidadUiState
+import com.example.agenciasoportunidades.model.data.local.AppDatabase
+import com.example.agenciasoportunidades.model.data.local.OportunidadEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-class OportunidadViewModel(
- private val repository: OportunidadRepository
-) : ViewModel() {
+class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
 
- // estateflows
- private val _formState = MutableStateFlow(OportunidadFormState())
- val formState: StateFlow<OportunidadFormState> = _formState.asStateFlow()
+    private val dao = AppDatabase.getDatabase(app).oportunidadDao()
 
- private val _listState = MutableStateFlow(OportunidadListState())
- val listState: StateFlow<OportunidadListState> = _listState.asStateFlow()
+    private val _estado = MutableStateFlow(OportunidadUiState())
 
+    val estado: StateFlow<OportunidadUiState> = _estado
 
- private var listaCompleta: List<OportunidadEntity> = emptyList()
+    private val _oportunidades = MutableStateFlow<List<OportunidadEntity>>(emptyList())
 
- // Variables
- private val _textoBusqueda = MutableStateFlow("")
- val textoBusqueda: StateFlow<String> = _textoBusqueda.asStateFlow()
+    val oportunidades: StateFlow<List<OportunidadEntity>> = _oportunidades
 
- init {
-  cargarOportunidades()
- }
+    private val _busqueda = MutableStateFlow("")
 
- // 2. Consulta  a Room
- private fun cargarOportunidades() {
-  viewModelScope.launch {
-   _listState.value = _listState.value.copy(estaCargando = true)
-   repository.obtenerTodasLasOportunidades().collectLatest { lista ->
-    listaCompleta = lista
-    aplicarFiltros()
-   }
-  }
- }
+    val busqueda: StateFlow<String> = _busqueda
 
- // Filtros
- fun onTextoBusquedaChanged(nuevoTexto: String) {
-  _textoBusqueda.value = nuevoTexto
-  aplicarFiltros()
- }
+    private var listaCompleta: List<OportunidadEntity> = emptyList()
 
- private fun aplicarFiltros() {
-  val query = _textoBusqueda.value.lowercase().trim()
-  val listaFiltrada = if (query.isEmpty()) {
-   listaCompleta
-  } else {
-   listaCompleta.filter { op ->
-    op.titulo.lowercase().contains(query) ||
-            op.organizacion.lowercase().contains(query) ||
-            op.ubicacion.lowercase().contains(query) ||
-            op.tipoEvento.lowercase().contains(query)
-   }
-  }
-  _listState.value = _listState.value.copy(
-   oportunidades = listaFiltrada,
-   estaCargando = false
-  )
- }
+    init {
+        cargarOportunidades()
+    }
 
- // validaciones
- fun onTituloChanged(nuevoTitulo: String) {
-  val error = if (nuevoTitulo.isBlank()) "El título es obligatorio" else null
-  _formState.value = _formState.value.copy(
-   titulo = nuevoTitulo,
-   tituloError = error
-  )
-  validarFormularioGlobal()
- }
+    private fun cargarOportunidades() {
+        viewModelScope.launch {
+            dao.obtenerTodasLasOportunidades().collect { lista ->
+                listaCompleta = lista
+                filtrar()
+            }
+        }
+    }
 
- fun onOrganizacionChanged(nuevaOrganizacion: String) {
-  val error = if (nuevaOrganizacion.isBlank()) "La organización es obligatoria" else null
-  _formState.value = _formState.value.copy(
-   organizacion = nuevaOrganizacion,
-   organizacionError = error
-  )
-  validarFormularioGlobal()
- }
+    fun onBusquedaChange(valor: String) {
+        _busqueda.value = valor
+        filtrar()
+    }
 
- fun onTipoEventoChanged(nuevoTipo: String) {
-  _formState.value = _formState.value.copy(tipoEvento = nuevoTipo)
-  validarFormularioGlobal()
- }
+    private fun filtrar() {
+        val texto = _busqueda.value.lowercase().trim()
+        _oportunidades.value = if (texto.isEmpty()) {
+            listaCompleta
+        } else {
+            listaCompleta.filter {
+                it.titulo.lowercase().contains(texto) ||
+                        it.organizacion.lowercase().contains(texto) ||
+                        it.ubicacion.lowercase().contains(texto) ||
+                        it.tipoEvento.lowercase().contains(texto)
+            }
+        }
+    }
 
- fun onPublicoObjetivoChanged(nuevoPublico: String) {
-  val error = if (nuevoPublico.isBlank()) "El público objetivo es obligatorio" else null
-  _formState.value = _formState.value.copy(
-   publicoObjetivo = nuevoPublico,
-   publicoObjetivoError = error
-  )
-  validarFormularioGlobal()
- }
+    fun onTituloChange(valor: String) {
+        _estado.update {
+            it.copy(
+                titulo = valor,
+                errores = it.errores.copy(titulo = null)
+            )
+        }
+    }
 
- fun onUbicacionChanged(nuevaUbicacion: String) {
-  val error = if (nuevaUbicacion.isBlank()) "La ubicación es obligatoria" else null
-  _formState.value = _formState.value.copy(
-   ubicacion = nuevaUbicacion,
-   ubicacionError = error
-  )
-  validarFormularioGlobal()
- }
+    fun onOrganizacionChange(valor: String) {
+        _estado.update {
+            it.copy(
+                organizacion = valor,
+                errores = it.errores.copy(organizacion = null)
+            )
+        }
+    }
 
- fun onFechaChanged(nuevaFecha: String) {
-  val error = if (nuevaFecha.isBlank()) "La fecha es obligatoria" else null
-  _formState.value = _formState.value.copy(
-   fecha = nuevaFecha,
-   fechaError = error
-  )
-  validarFormularioGlobal()
- }
+    fun onTipoEventoChange(valor: String) {
+        _estado.update {
+            it.copy(tipoEvento = valor)
+        }
+    }
 
- fun onFotoPathChanged(nuevaRutaFoto: String?) {
-  _formState.value = _formState.value.copy(
-   fotoPath = nuevaRutaFoto,
-   fotoError = if (nuevaRutaFoto == null) "Debe adjuntar una foto de evidencia" else null
-  )
-  validarFormularioGlobal()
- }
+    fun onPublicoObjetivoChange(valor: String) {
+        _estado.update {
+            it.copy(
+                publicoObjetivo = valor,
+                errores = it.errores.copy(publicoObjetivo = null)
+            )
+        }
+    }
 
- // Autocompletar desde un QR (recurso nativo 2).
- // Reutiliza las mismas funciones de cada campo, así los datos del QR pasan por las mismas validaciones.
- // Devuelve false si el QR no corresponde a un evento.
- fun cargarDesdeQr(textoQr: String): Boolean {
-  val datos = DatosQrEvento.desdeTexto(textoQr) ?: return false
-  datos.titulo?.let { onTituloChanged(it) }
-  datos.organizacion?.let { onOrganizacionChanged(it) }
-  datos.tipoEvento?.let { onTipoEventoChanged(it) }
-  datos.publicoObjetivo?.let { onPublicoObjetivoChanged(it) }
-  datos.ubicacion?.let { onUbicacionChanged(it) }
-  datos.fecha?.let { onFechaChanged(it) }
-  return true
- }
+    fun onUbicacionChange(valor: String) {
+        _estado.update {
+            it.copy(
+                ubicacion = valor,
+                errores = it.errores.copy(ubicacion = null)
+            )
+        }
+    }
 
- // Validación global
- private fun validarFormularioGlobal() {
-  val state = _formState.value
-  val esValido = state.titulo.isNotBlank() &&
-          state.organizacion.isNotBlank() &&
-          state.publicoObjetivo.isNotBlank() &&
-          state.ubicacion.isNotBlank() &&
-          state.fecha.isNotBlank()
+    fun onFechaChange(valor: String) {
+        _estado.update {
+            it.copy(
+                fecha = valor.filter { c -> c.isDigit() }.take(8),
+                errores = it.errores.copy(fecha = null)
+            )
+        }
+    }
 
-  _formState.value = state.copy(esFormularioValido = esValido)
- }
+    fun onFotoChange(ruta: String?) {
+        _estado.update {
+            it.copy(fotoPath = ruta)
+        }
+    }
 
- //  base de datos
- fun guardarOportunidad(onExito: () -> Unit) {
-  val state = _formState.value
-  if (state.esFormularioValido) {
-   viewModelScope.launch {
-    val nuevaOportunidad = OportunidadEntity(
-     titulo = state.titulo,
-     organizacion = state.organizacion,
-     tipoEvento = state.tipoEvento,
-     publicoObjetivo = state.publicoObjetivo,
-     ubicacion = state.ubicacion,
-     fecha = state.fecha,
-     fotoPath = state.fotoPath
-    )
-    repository.insertarOportunidad(nuevaOportunidad)
-    limpiarFormulario()
-    onExito()
-   }
-  }
- }
+    fun cargarDesdeQr(texto: String): Boolean {
+        val datos = texto
+            .split('\n', ';')
+            .mapNotNull { linea ->
+                val partes = linea.split('=', limit = 2)
+                if (partes.size == 2 && partes[1].isNotBlank()) {
+                    partes[0].trim().lowercase() to partes[1].trim()
+                } else null
+            }
+            .toMap()
 
- fun eliminarOportunidad(oportunidad: OportunidadEntity) {
-  viewModelScope.launch {
-   repository.eliminarOportunidad(oportunidad)
-  }
- }
+        val claves = listOf("titulo", "organizacion", "tipo", "publico", "ubicacion", "fecha")
+        if (claves.none { it in datos }) return false
 
- private fun limpiarFormulario() {
-  _formState.value = OportunidadFormState()
- }
+        _estado.update {
+            it.copy(
+                titulo = datos["titulo"] ?: it.titulo,
+                organizacion = datos["organizacion"] ?: it.organizacion,
+                tipoEvento = datos["tipo"] ?: it.tipoEvento,
+                publicoObjetivo = datos["publico"] ?: it.publicoObjetivo,
+                ubicacion = datos["ubicacion"] ?: it.ubicacion,
+                fecha = datos["fecha"]?.filter { c -> c.isDigit() }?.take(8) ?: it.fecha,
+                errores = OportunidadErrores()
+            )
+        }
+        return true
+    }
+
+    fun validarFormulario(): Boolean {
+        val estadoActual = _estado.value
+
+        val errores = OportunidadErrores(
+            titulo = if (estadoActual.titulo.isBlank())
+                "El título es obligatorio"
+            else null,
+
+            organizacion = if (estadoActual.organizacion.isBlank())
+                "La organización es obligatoria"
+            else null,
+
+            publicoObjetivo = if (estadoActual.publicoObjetivo.isBlank())
+                "El público objetivo es obligatorio"
+            else null,
+
+            ubicacion = if (estadoActual.ubicacion.isBlank())
+                "La ubicación es obligatoria"
+            else null,
+
+            fecha = when {
+                estadoActual.fecha.isBlank() -> "La fecha es obligatoria"
+                !esFechaValida(estadoActual.fecha) -> "Ingresa una fecha válida (dd/mm/aaaa)"
+                else -> null
+            }
+        )
+
+        val hayErrores = listOfNotNull(
+            errores.titulo,
+            errores.organizacion,
+            errores.publicoObjetivo,
+            errores.ubicacion,
+            errores.fecha
+        ).isNotEmpty()
+
+        _estado.update {
+            it.copy(errores = errores)
+        }
+
+        return !hayErrores
+    }
+
+    private fun esFechaValida(digitos: String): Boolean {
+        if (digitos.length != 8) return false
+        val formato = SimpleDateFormat("ddMMyyyy", Locale.getDefault())
+        formato.isLenient = false
+        return runCatching { formato.parse(digitos) }.getOrNull() != null
+    }
+
+    fun guardar(onListo: () -> Unit) {
+        val a = _estado.value
+        viewModelScope.launch {
+            dao.insertarOportunidad(
+                OportunidadEntity(
+                    titulo = a.titulo,
+                    organizacion = a.organizacion,
+                    tipoEvento = a.tipoEvento,
+                    publicoObjetivo = a.publicoObjetivo,
+                    ubicacion = a.ubicacion,
+                    fecha = "${a.fecha.substring(0, 2)}/${a.fecha.substring(2, 4)}/${a.fecha.substring(4)}",
+                    fotoPath = a.fotoPath
+                )
+            )
+            _estado.value = OportunidadUiState()
+            onListo()
+        }
+    }
+
+    fun eliminar(oportunidad: OportunidadEntity) {
+        viewModelScope.launch {
+            dao.eliminarOportunidad(oportunidad)
+        }
+    }
 }

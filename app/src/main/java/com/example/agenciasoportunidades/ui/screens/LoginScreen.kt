@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,54 +25,55 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.agenciasoportunidades.ui.components.CampoTexto
+import androidx.navigation.NavController
 import com.example.agenciasoportunidades.viewmodel.LoginViewModel
 
-// Pantalla de ingreso con cuenta ficticia.
-// Igual que el formulario de oportunidades: muestra el estado del ViewModel y le avisa cada cambio.
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel,
-    onLoginExitoso: (nombreUsuario: String) -> Unit
+    navController: NavController,
+    viewModel: LoginViewModel
 ) {
-    val estado by viewModel.uiState.collectAsState()
-
-    // Cuando el ViewModel confirma la sesión, se avisa una sola vez para navegar
-    LaunchedEffect(estado.usuarioNombre) {
-        estado.usuarioNombre?.let(onLoginExitoso)
-    }
+    val estado by viewModel.estado.collectAsState()
+    var claveVisible by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding()
-            .imePadding() // el teclado no tapa los campos
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Encabezado: identidad de la app
         Icon(
             Icons.Filled.BusinessCenter,
             contentDescription = null,
@@ -91,26 +94,80 @@ fun LoginScreen(
         )
         Spacer(Modifier.height(32.dp))
 
-        CampoTexto(
-            valor = estado.correo,
-            onValorChange = viewModel::onCorreoChanged,
-            etiqueta = "Correo corporativo",
-            icono = Icons.Filled.Email,
-            error = estado.correoError,
-            placeholder = "nombre@empresa.cl",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
-        )
-        CampoTexto(
-            valor = estado.clave,
-            onValorChange = viewModel::onClaveChanged,
-            etiqueta = "Clave",
-            icono = Icons.Filled.Lock,
-            error = estado.claveError,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            esClave = true
+        OutlinedTextField(
+            value = estado.correo,
+            onValueChange = viewModel::onCorreoChange,
+            label = { Text("Correo corporativo") },
+            placeholder = { Text("nombre@empresa.cl") },
+            leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
+            trailingIcon = {
+                AnimatedVisibility(
+                    visible = estado.errores.correo != null,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                }
+            },
+            isError = estado.errores.correo != null,
+            supportingText = {
+                AnimatedVisibility(
+                    visible = estado.errores.correo != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Text(
+                        text = estado.errores.correo.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
 
-        // Error general: aparece (animado) solo después de consultar la base de datos
+        OutlinedTextField(
+            value = estado.clave,
+            onValueChange = viewModel::onClaveChange,
+            label = { Text("Clave") },
+            leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AnimatedVisibility(
+                        visible = estado.errores.clave != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                    IconButton(onClick = { claveVisible = !claveVisible }) {
+                        Icon(
+                            if (claveVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (claveVisible) "Ocultar clave" else "Mostrar clave"
+                        )
+                    }
+                }
+            },
+            visualTransformation = if (claveVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            isError = estado.errores.clave != null,
+            supportingText = {
+                AnimatedVisibility(
+                    visible = estado.errores.clave != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Text(
+                        text = estado.errores.clave.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
         AnimatedVisibility(
             visible = estado.mensajeError != null,
             enter = expandVertically() + fadeIn(),
@@ -118,7 +175,9 @@ fun LoginScreen(
         ) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
             ) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
@@ -131,21 +190,23 @@ fun LoginScreen(
             }
         }
 
-        // Habilitado solo si el ViewModel dice que el formulario es válido
         Button(
-            onClick = viewModel::iniciarSesion,
-            enabled = estado.esFormularioValido && !estado.estaCargando,
+            onClick = {
+                if (viewModel.validarFormulario()) {
+                    viewModel.iniciarSesion {
+                        navController.navigate("lista") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp)
                 .height(52.dp)
         ) {
-            if (estado.estaCargando) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null)
-                Text("  Ingresar")
-            }
+            Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null)
+            Text("  Ingresar")
         }
     }
 }

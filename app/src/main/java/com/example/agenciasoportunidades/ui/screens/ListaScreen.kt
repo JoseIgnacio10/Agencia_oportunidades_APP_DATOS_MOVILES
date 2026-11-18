@@ -1,23 +1,31 @@
 package com.example.agenciasoportunidades.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -33,23 +41,26 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.agenciasoportunidades.ui.components.OportunidadCard
+import androidx.navigation.NavController
+import com.example.agenciasoportunidades.model.data.local.OportunidadEntity
+import com.example.agenciasoportunidades.viewmodel.LoginViewModel
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 
-// Pantalla de lista: solo observa el estado del ViewModel y le avisa las acciones del usuario.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaScreen(
+    navController: NavController,
     viewModel: OportunidadViewModel,
-    onNuevaOportunidad: () -> Unit,
-    nombreUsuario: String? = null,
-    onCerrarSesion: (() -> Unit)? = null
+    loginViewModel: LoginViewModel
 ) {
-    // collectAsState: cada vez que Room cambia, la lista se vuelve a dibujar sola
-    val listState by viewModel.listState.collectAsState()
-    val textoBusqueda by viewModel.textoBusqueda.collectAsState()
+    val oportunidades by viewModel.oportunidades.collectAsState()
+    val busqueda by viewModel.busqueda.collectAsState()
+    val sesion by loginViewModel.estado.collectAsState()
 
     Scaffold(
         topBar = {
@@ -57,17 +68,19 @@ fun ListaScreen(
                 title = {
                     Column {
                         Text("Oportunidades")
-                        // Identificación del usuario con sesión iniciada
-                        nombreUsuario?.let {
+                        sesion.usuarioNombre?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 },
                 actions = {
-                    onCerrarSesion?.let { cerrar ->
-                        IconButton(onClick = cerrar) {
-                            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
+                    IconButton(onClick = {
+                        loginViewModel.cerrarSesion()
+                        navController.navigate("login") {
+                            popUpTo(navController.graph.id) { inclusive = true }
                         }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -77,7 +90,7 @@ fun ListaScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onNuevaOportunidad,
+                onClick = { navController.navigate("formulario") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text("Nueva") }
             )
@@ -88,15 +101,14 @@ fun ListaScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Buscador: el filtrado lo hace el ViewModel (aplicarFiltros)
             OutlinedTextField(
-                value = textoBusqueda,
-                onValueChange = viewModel::onTextoBusquedaChanged,
+                value = busqueda,
+                onValueChange = viewModel::onBusquedaChange,
                 label = { Text("Buscar por título, organización, tipo o ubicación") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
-                    if (textoBusqueda.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onTextoBusquedaChanged("") }) {
+                    if (busqueda.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onBusquedaChange("") }) {
                             Icon(Icons.Filled.Clear, contentDescription = "Limpiar búsqueda")
                         }
                     }
@@ -107,23 +119,38 @@ fun ListaScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            when {
-                listState.estaCargando -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
-
-                listState.oportunidades.isEmpty() -> EstadoVacio(hayBusqueda = textoBusqueda.isNotBlank())
-
-                else -> LazyColumn(
-                    // Espacio abajo para que el botón "Nueva" no tape la última tarjeta
+            if (oportunidades.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Filled.EventBusy,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        text = if (busqueda.isNotBlank()) "No hay oportunidades que coincidan con la búsqueda"
+                        else "Aún no hay oportunidades registradas.\nPulsa \"Nueva\" para crear la primera.",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(listState.oportunidades, key = { it.id }) { oportunidad ->
+                    items(oportunidades, key = { it.id }) { oportunidad ->
                         OportunidadCard(
                             oportunidad = oportunidad,
-                            onEliminar = { viewModel.eliminarOportunidad(oportunidad) }
+                            onEliminar = { viewModel.eliminar(oportunidad) }
                         )
                     }
                 }
@@ -133,27 +160,57 @@ fun ListaScreen(
 }
 
 @Composable
-private fun EstadoVacio(hayBusqueda: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+private fun OportunidadCard(
+    oportunidad: OportunidadEntity,
+    onEliminar: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
+        oportunidad.fotoPath?.let { ruta ->
+            FotoEvidencia(ruta = ruta, alto = 160.dp)
+        }
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = oportunidad.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onEliminar) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Eliminar oportunidad",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            AssistChip(onClick = {}, label = { Text(oportunidad.tipoEvento) })
+            Spacer(Modifier.size(4.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                DatoConIcono(Icons.Filled.Business, oportunidad.organizacion)
+                DatoConIcono(Icons.Filled.Event, oportunidad.fecha)
+                DatoConIcono(Icons.Filled.Place, oportunidad.ubicacion)
+                DatoConIcono(Icons.Filled.Groups, oportunidad.publicoObjetivo)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DatoConIcono(icono: ImageVector, texto: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            Icons.Filled.EventBusy,
+            icono,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.size(64.dp)
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp)
         )
-        Spacer(Modifier.size(12.dp))
-        Text(
-            text = if (hayBusqueda) "No hay oportunidades que coincidan con la búsqueda"
-            else "Aún no hay oportunidades registradas.\nPulsa \"Nueva\" para crear la primera.",
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Spacer(Modifier.width(8.dp))
+        Text(texto, style = MaterialTheme.typography.bodyMedium)
     }
 }

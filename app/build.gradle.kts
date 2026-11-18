@@ -46,10 +46,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    // Navegación entre pantallas y viewModel() dentro de los Composables
+
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    // Íconos para los campos del formulario (errores, fecha, ubicación, etc.)
+
     implementation(libs.androidx.compose.material.icons.extended)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -58,16 +58,16 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    // CameraX: vista previa de la cámara y análisis de cada imagen para el lector QR
+
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
-    // ML Kit: reconoce el código QR dentro de la imagen
+
     implementation(libs.mlkit.barcode.scanning)
-    // Room
+
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    // ksp (no annotationProcessor): genera AppDatabase_Impl a partir de las clases Kotlin
+
     ksp(libs.androidx.room.compiler)
 }

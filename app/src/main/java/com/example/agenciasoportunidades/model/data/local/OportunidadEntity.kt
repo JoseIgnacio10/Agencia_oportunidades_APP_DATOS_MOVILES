@@ -1,4 +1,4 @@
-package com.example.agenciasoportunidades.data
+package com.example.agenciasoportunidades.model.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

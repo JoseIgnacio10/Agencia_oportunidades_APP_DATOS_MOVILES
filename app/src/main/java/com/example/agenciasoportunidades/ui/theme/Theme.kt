@@ -22,7 +22,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun AgenciasOportunidadesTheme(
-    // Desactivamos dynamicColor para que SIEMPRE aplique tus colores corporativos
+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

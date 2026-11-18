@@ -6,7 +6,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Estilos de texto para la jerarquía visual de la Agencia Atenas
 val Typography = Typography(
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,

@@ -1,16 +1,18 @@
 package com.example.agenciasoportunidades.ui.screens
 
 import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
-import com.example.agenciasoportunidades.device.CameraManager
-import com.example.agenciasoportunidades.ui.components.FotoEvidencia
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,24 +24,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,16 +59,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.agenciasoportunidades.ui.components.CampoTexto
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.navigation.NavController
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// Tipos de oportunidad definidos en el caso (sección 3.2)
 private val TIPOS_EVENTO = listOf(
     "Evento corporativo",
     "Feria empresarial",
@@ -70,17 +100,39 @@ private val TIPOS_EVENTO = listOf(
     "Otra instancia relevante"
 )
 
-// Formulario de nueva oportunidad.
-// Cada campo avisa su cambio al ViewModel, y el ViewModel devuelve el valor y el error a mostrar.
+private object FormatoFecha : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digitos = text.text
+        val conBarras = buildString {
+            digitos.forEachIndexed { i, c ->
+                append(c)
+                if ((i == 1 || i == 3) && i < digitos.length - 1) append('/')
+            }
+        }
+        val mapeo = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int = when {
+                offset <= 2 -> offset
+                offset <= 4 -> offset + 1
+                else -> offset + 2
+            }
+
+            override fun transformedToOriginal(offset: Int): Int = when {
+                offset <= 2 -> offset
+                offset <= 5 -> offset - 1
+                else -> offset - 2
+            }
+        }
+        return TransformedText(AnnotatedString(conBarras), mapeo)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormularioScreen(
-    viewModel: OportunidadViewModel,
-    onGuardado: () -> Unit,
-    onVolver: () -> Unit,
-    onEscanearQr: () -> Unit
+    navController: NavController,
+    viewModel: OportunidadViewModel
 ) {
-    val form by viewModel.formState.collectAsState()
+    val estado by viewModel.estado.collectAsState()
     val capitalizar = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
 
     Scaffold(
@@ -88,7 +140,7 @@ fun FormularioScreen(
             TopAppBar(
                 title = { Text("Nueva oportunidad") },
                 navigationIcon = {
-                    IconButton(onClick = onVolver) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
@@ -102,14 +154,13 @@ fun FormularioScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .imePadding() // el teclado no tapa los campos
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Atajo en terreno: el QR del afiche del evento llena los campos (recurso nativo 2)
             OutlinedButton(
-                onClick = onEscanearQr,
+                onClick = { navController.navigate("escanear_qr") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
@@ -117,63 +168,174 @@ fun FormularioScreen(
                 Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
                 Text("  Escanear QR del evento")
             }
-            CampoTexto(
-                valor = form.titulo,
-                onValorChange = viewModel::onTituloChanged,
-                etiqueta = "Título de la oportunidad *",
-                icono = Icons.Filled.Title,
-                error = form.tituloError,
-                keyboardOptions = capitalizar
+
+            OutlinedTextField(
+                value = estado.titulo,
+                onValueChange = viewModel::onTituloChange,
+                label = { Text("Título de la oportunidad *") },
+                leadingIcon = { Icon(Icons.Filled.Title, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.titulo != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.titulo != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.titulo != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.titulo.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                keyboardOptions = capitalizar,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
-            CampoTexto(
-                valor = form.organizacion,
-                onValorChange = viewModel::onOrganizacionChanged,
-                etiqueta = "Organización responsable *",
-                icono = Icons.Filled.Business,
-                error = form.organizacionError,
-                keyboardOptions = capitalizar
+
+            OutlinedTextField(
+                value = estado.organizacion,
+                onValueChange = viewModel::onOrganizacionChange,
+                label = { Text("Organización responsable *") },
+                leadingIcon = { Icon(Icons.Filled.Business, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.organizacion != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.organizacion != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.organizacion != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.organizacion.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                keyboardOptions = capitalizar,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
+
             SelectorTipoEvento(
-                seleccionado = form.tipoEvento,
-                onSeleccionar = viewModel::onTipoEventoChanged
+                seleccionado = estado.tipoEvento,
+                onSeleccionar = viewModel::onTipoEventoChange
             )
-            CampoTexto(
-                valor = form.publicoObjetivo,
-                onValorChange = viewModel::onPublicoObjetivoChanged,
-                etiqueta = "Público objetivo *",
-                icono = Icons.Filled.Groups,
-                error = form.publicoObjetivoError,
-                placeholder = "Ej: trabajadores y sus familias",
-                keyboardOptions = capitalizar
+
+            OutlinedTextField(
+                value = estado.publicoObjetivo,
+                onValueChange = viewModel::onPublicoObjetivoChange,
+                label = { Text("Público objetivo *") },
+                placeholder = { Text("Ej: trabajadores y sus familias") },
+                leadingIcon = { Icon(Icons.Filled.Groups, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.publicoObjetivo != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.publicoObjetivo != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.publicoObjetivo != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.publicoObjetivo.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                keyboardOptions = capitalizar,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
-            CampoTexto(
-                valor = form.ubicacion,
-                onValorChange = viewModel::onUbicacionChanged,
-                etiqueta = "Ubicación (comuna, región) *",
-                icono = Icons.Filled.Place,
-                error = form.ubicacionError,
-                placeholder = "Ej: Puente Alto, RM",
-                keyboardOptions = capitalizar
+
+            OutlinedTextField(
+                value = estado.ubicacion,
+                onValueChange = viewModel::onUbicacionChange,
+                label = { Text("Ubicación (comuna, región) *") },
+                placeholder = { Text("Ej: Puente Alto, RM") },
+                leadingIcon = { Icon(Icons.Filled.Place, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.ubicacion != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.ubicacion != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.ubicacion != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.ubicacion.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                keyboardOptions = capitalizar,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
-            CampoTexto(
-                valor = form.fecha,
-                onValorChange = viewModel::onFechaChanged,
-                etiqueta = "Fecha del evento *",
-                icono = Icons.Filled.Event,
-                error = form.fechaError,
-                placeholder = "dd/mm/aaaa"
+
+            OutlinedTextField(
+                value = estado.fecha,
+                onValueChange = viewModel::onFechaChange,
+                label = { Text("Fecha del evento *") },
+                placeholder = { Text("dd/mm/aaaa") },
+                leadingIcon = { Icon(Icons.Filled.Event, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.fecha != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.fecha != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.fecha != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.fecha.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                visualTransformation = FormatoFecha,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             SeccionFoto(
-                fotoPath = form.fotoPath,
-                fotoError = form.fotoError,
-                onFotoTomada = viewModel::onFotoPathChanged
+                fotoPath = estado.fotoPath,
+                onFotoTomada = viewModel::onFotoChange
             )
 
-            // El botón se habilita solo cuando el ViewModel dice que el formulario es válido
             Button(
-                onClick = { viewModel.guardarOportunidad(onExito = onGuardado) },
-                enabled = form.esFormularioValido,
+                onClick = {
+                    if (viewModel.validarFormulario()) {
+                        viewModel.guardar {
+                            navController.popBackStack()
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp)
@@ -182,48 +344,36 @@ fun FormularioScreen(
                 Icon(Icons.Filled.Save, contentDescription = null)
                 Text("  Guardar oportunidad")
             }
-            if (!form.esFormularioValido) {
-                Text(
-                    text = "Completa todos los campos marcados con * para guardar.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
 
-// Foto de evidencia con la cámara (recurso nativo 1).
-// Flujo: revisar permiso → pedirlo si falta → abrir la cámara → avisar la ruta al ViewModel.
 @Composable
 private fun SeccionFoto(
     fotoPath: String?,
-    fotoError: String?,
     onFotoTomada: (String?) -> Unit
 ) {
     val context = LocalContext.current
-    val cameraManager = remember(context) { CameraManager(context) }
-    // rememberSaveable: la ruta sobrevive si Android recrea la pantalla mientras la cámara está abierta
     var rutaPendiente by rememberSaveable { mutableStateOf<String?>(null) }
     var permisoDenegado by rememberSaveable { mutableStateOf(false) }
 
-    // Abre la app de cámara y espera el resultado (true = foto guardada)
     val tomarFoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { guardada ->
         if (guardada) {
             onFotoTomada(rutaPendiente)
         } else {
-            cameraManager.eliminarFoto(rutaPendiente) // canceló: el archivo vacío no sirve
+            rutaPendiente?.let { File(it).delete() }
         }
         rutaPendiente = null
     }
 
     fun abrirCamara() {
-        val archivo = cameraManager.crearArchivoFoto()
+        val carpeta = File(context.filesDir, "fotos").apply { mkdirs() }
+        val fecha = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val archivo = File(carpeta, "EVENTO_$fecha.jpg")
         rutaPendiente = archivo.absolutePath
-        tomarFoto.launch(cameraManager.obtenerUri(archivo))
+        tomarFoto.launch(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", archivo))
     }
 
-    // Muestra el diálogo de permiso de Android
     val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
         permisoDenegado = !concedido
         if (concedido) abrirCamara()
@@ -238,8 +388,9 @@ private fun SeccionFoto(
 
         OutlinedButton(
             onClick = {
-                if (cameraManager.tienePermisoCamara()) abrirCamara()
-                else pedirPermiso.launch(Manifest.permission.CAMERA)
+                val tienePermiso = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                        PackageManager.PERMISSION_GRANTED
+                if (tienePermiso) abrirCamara() else pedirPermiso.launch(Manifest.permission.CAMERA)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -247,33 +398,66 @@ private fun SeccionFoto(
             Text(if (fotoPath == null) "  Tomar foto" else "  Tomar otra foto")
         }
 
-        // Retroalimentación si el usuario rechazó el permiso: la app sigue funcionando sin foto
         if (permisoDenegado) {
-            MensajeAviso("Sin permiso de cámara no se puede tomar la foto. Puedes guardar la oportunidad sin foto o volver a intentarlo.")
-        }
-        if (fotoError != null) {
-            MensajeAviso(fotoError)
+            Row {
+                Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Text(
+                    text = "  Sin permiso de cámara no se puede tomar la foto. Puedes guardar la oportunidad sin foto o volver a intentarlo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MensajeAviso(texto: String) {
-    Row {
-        Icon(
-            Icons.Filled.Warning,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error
-        )
-        Text(
-            text = "  $texto",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
-        )
+fun FotoEvidencia(
+    ruta: String,
+    modifier: Modifier = Modifier,
+    alto: Dp = 180.dp
+) {
+    val imagen by produceState<ImageBitmap?>(initialValue = null, ruta) {
+        value = withContext(Dispatchers.IO) {
+            val archivo = File(ruta)
+            if (!archivo.exists() || archivo.length() == 0L) {
+                null
+            } else {
+                val dimensiones = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(ruta, dimensiones)
+                var escala = 1
+                while (dimensiones.outWidth / escala > 600 || dimensiones.outHeight / escala > 600) {
+                    escala *= 2
+                }
+                BitmapFactory.decodeFile(ruta, BitmapFactory.Options().apply { inSampleSize = escala })
+                    ?.asImageBitmap()
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(alto)
+            .clip(RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        val foto = imagen
+        if (foto == null) {
+            CircularProgressIndicator()
+        } else {
+            Image(
+                bitmap = foto,
+                contentDescription = "Foto de evidencia del evento",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(alto)
+            )
+        }
     }
 }
 
-// Lista desplegable con los tipos de evento del caso
 @Composable
 private fun SelectorTipoEvento(
     seleccionado: String,
@@ -281,7 +465,11 @@ private fun SelectorTipoEvento(
 ) {
     var expandido by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+    ) {
         OutlinedTextField(
             value = seleccionado,
             onValueChange = {},
@@ -291,7 +479,6 @@ private fun SelectorTipoEvento(
             trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = "Elegir tipo") },
             modifier = Modifier.fillMaxWidth()
         )
-        // Capa transparente encima: el campo es de solo lectura y así todo el campo abre el menú
         Box(
             modifier = Modifier
                 .matchParentSize()

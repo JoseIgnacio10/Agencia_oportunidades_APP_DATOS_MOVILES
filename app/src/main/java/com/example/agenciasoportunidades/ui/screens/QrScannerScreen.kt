@@ -1,8 +1,15 @@
 package com.example.agenciasoportunidades.ui.screens
 
 import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -42,21 +49,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.agenciasoportunidades.device.CameraManager
-import com.example.agenciasoportunidades.device.QrScannerManager
+import androidx.navigation.NavController
+import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
-// Pantalla de escaneo: pide el permiso, muestra la cámara en vivo y entrega el texto del QR.
-// No interpreta el QR: eso lo hace el ViewModel (cargarDesdeQr).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QrScannerScreen(
-    onQrLeido: (String) -> Unit,
-    onVolver: () -> Unit
+    navController: NavController,
+    viewModel: OportunidadViewModel
 ) {
     val context = LocalContext.current
-    val cameraManager = remember(context) { CameraManager(context) }
-    var tienePermiso by remember { mutableStateOf(cameraManager.tienePermisoCamara()) }
+    var tienePermiso by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED
+        )
+    }
     var permisoDenegado by rememberSaveable { mutableStateOf(false) }
 
     val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
@@ -64,7 +80,6 @@ fun QrScannerScreen(
         permisoDenegado = !concedido
     }
 
-    // Al entrar a la pantalla, si falta el permiso se pide de inmediato
     LaunchedEffect(Unit) {
         if (!tienePermiso) pedirPermiso.launch(Manifest.permission.CAMERA)
     }
@@ -74,7 +89,7 @@ fun QrScannerScreen(
             TopAppBar(
                 title = { Text("Escanear QR del evento") },
                 navigationIcon = {
-                    IconButton(onClick = onVolver) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
@@ -89,43 +104,119 @@ fun QrScannerScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when {
-                tienePermiso -> VistaCamaraQr(onQrLeido = onQrLeido)
-                permisoDenegado -> PermisoDenegado(
-                    onReintentar = { pedirPermiso.launch(Manifest.permission.CAMERA) }
+            if (tienePermiso) {
+                VistaCamaraQr(
+                    onQrLeido = { texto ->
+                        val cargado = viewModel.cargarDesdeQr(texto)
+                        val mensaje = if (cargado) "Datos del evento cargados desde el QR"
+                        else "Este QR no corresponde a un evento"
+                        Toast.makeText(context, mensaje, Toast.LENGTH_SHORT).show()
+                        navController.popBackStack()
+                    }
                 )
+            } else if (permisoDenegado) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Filled.NoPhotography,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        text = "Para leer el QR la app necesita usar la cámara. Puedes volver y completar el formulario a mano.",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(Modifier.size(16.dp))
+                    Button(onClick = { pedirPermiso.launch(Manifest.permission.CAMERA) }) {
+                        Text("Permitir cámara")
+                    }
+                }
             }
         }
     }
 }
 
+@androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 private fun VistaCamaraQr(onQrLeido: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    // rememberUpdatedState: si cambia la función de aviso, no hace falta reiniciar la cámara
     val avisoActual by rememberUpdatedState(onQrLeido)
 
     val previewView = remember(context) {
         PreviewView(context).apply {
             scaleType = PreviewView.ScaleType.FILL_CENTER
-            // COMPATIBLE: funciona mejor en emuladores
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         }
     }
 
-    // Enciende la cámara al mostrar la vista y la apaga al salir (onDispose)
     DisposableEffect(lifecycleOwner, previewView) {
-        val lectorQr = QrScannerManager(context)
-        lectorQr.iniciar(lifecycleOwner, previewView) { texto -> avisoActual(texto) }
-        onDispose { lectorQr.detener() }
+        val ejecutor = Executors.newSingleThreadExecutor()
+        val lector = BarcodeScanning.getClient(
+            BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build()
+        )
+        val qrDetectado = AtomicBoolean(false)
+        var proveedorCamara: ProcessCameraProvider? = null
+
+        val futuro = ProcessCameraProvider.getInstance(context)
+        futuro.addListener({
+            val proveedor = futuro.get()
+            proveedorCamara = proveedor
+
+            val vistaPrevia = Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+
+            val analisis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+
+            analisis.setAnalyzer(ejecutor) { imagenCamara ->
+                val imagen = imagenCamara.image
+                if (imagen == null || qrDetectado.get()) {
+                    imagenCamara.close()
+                } else {
+                    val entrada = InputImage.fromMediaImage(imagen, imagenCamara.imageInfo.rotationDegrees)
+                    lector.process(entrada)
+                        .addOnSuccessListener { codigos ->
+                            val texto = codigos.firstOrNull { it.rawValue != null }?.rawValue
+                            if (texto != null && qrDetectado.compareAndSet(false, true)) {
+                                avisoActual(texto)
+                            }
+                        }
+                        .addOnCompleteListener { imagenCamara.close() }
+                }
+            }
+
+            val camara = if (proveedor.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            } else {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            }
+
+            proveedor.unbindAll()
+            proveedor.bindToLifecycle(lifecycleOwner, camara, vistaPrevia, analisis)
+        }, ContextCompat.getMainExecutor(context))
+
+        onDispose {
+            proveedorCamara?.unbindAll()
+            ejecutor.shutdown()
+            lector.close()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // PreviewView es una vista clásica de Android: AndroidView la inserta dentro de Compose
         AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-
-        // Marco guía para que el usuario centre el QR
         Box(
             modifier = Modifier
                 .size(240.dp)
@@ -145,32 +236,5 @@ private fun VistaCamaraQr(onQrLeido: (String) -> Unit) {
                 modifier = Modifier.padding(12.dp)
             )
         }
-    }
-}
-
-// Retroalimentación cuando el usuario rechaza el permiso: explica y permite reintentar
-@Composable
-private fun PermisoDenegado(onReintentar: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            Icons.Filled.NoPhotography,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(64.dp)
-        )
-        Spacer(Modifier.size(12.dp))
-        Text(
-            text = "Para leer el QR la app necesita usar la cámara. Puedes volver y completar el formulario a mano.",
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(Modifier.size(16.dp))
-        Button(onClick = onReintentar) { Text("Permitir cámara") }
     }
 }
