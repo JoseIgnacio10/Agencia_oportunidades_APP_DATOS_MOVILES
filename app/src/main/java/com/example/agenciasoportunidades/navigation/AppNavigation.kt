@@ -9,10 +9,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.agenciasoportunidades.ui.screens.EventosScreen
 import com.example.agenciasoportunidades.ui.screens.FormularioScreen
 import com.example.agenciasoportunidades.ui.screens.ListaScreen
 import com.example.agenciasoportunidades.ui.screens.LoginScreen
 import com.example.agenciasoportunidades.ui.screens.QrScannerScreen
+import com.example.agenciasoportunidades.viewmodel.EventoViewModel
 import com.example.agenciasoportunidades.viewmodel.LoginViewModel
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 
@@ -22,6 +24,7 @@ fun AppNavigation() {
 
     val loginViewModel: LoginViewModel = viewModel()
     val oportunidadViewModel: OportunidadViewModel = viewModel()
+    val eventoViewModel: EventoViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -69,6 +72,14 @@ fun AppNavigation() {
             exitTransition = { fadeOut(animationSpec = tween(350)) }
         ) {
             QrScannerScreen(navController, oportunidadViewModel)
+        }
+
+        composable (
+            route = "eventos",
+            enterTransition = { fadeIn(animationSpec = tween(350))},
+            exitTransition = { fadeOut(animationSpec = tween (350))}
+        ) {
+            EventosScreen(navController, eventoViewModel)
         }
     }
 }

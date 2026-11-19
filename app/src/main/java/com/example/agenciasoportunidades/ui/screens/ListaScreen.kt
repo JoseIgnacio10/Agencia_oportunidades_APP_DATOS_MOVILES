@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Event
@@ -74,6 +75,9 @@ fun ListaScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { navController.navigate("eventos") }) {
+                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Catálogo de eventos")
+                    }
                     IconButton(onClick = {
                         loginViewModel.cerrarSesion()
                         navController.navigate("login") {
