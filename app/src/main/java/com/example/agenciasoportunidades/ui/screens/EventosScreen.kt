@@ -3,6 +3,7 @@ package com.example.agenciasoportunidades.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,13 +13,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +55,7 @@ fun EventosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Catalogo de eventos") },
+                title = { Text("Catálogo de eventos") },
                 navigationIcon = {
                     IconButton(onClick =  {
                         navController.popBackStack() }) {
@@ -65,6 +70,16 @@ fun EventosScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    viewModel.nuevoEvento()
+                    navController.navigate("evento_formulario")
+                },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("Nuevo evento") }
             )
         }
     ) { padding ->
@@ -108,11 +123,23 @@ fun EventosScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = evento.nombre,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = evento.nombre,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = {
+                                    viewModel.editarEvento(evento)
+                                    navController.navigate("evento_formulario")
+                                }) {
+                                    Icon(Icons.Filled.Edit, contentDescription = "Editar evento")
+                                }
+                                IconButton(onClick = { viewModel.eliminar(evento) }) {
+                                    Icon(Icons.Filled.Delete, contentDescription = "Eliminar evento", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
                             AssistChip(onClick = {}, label = { Text(evento.tipo) })
                             Text("Organización: ${evento.organizacion}")
                             Text("Fecha: ${evento.fecha} ${evento.horario.orEmpty()}")

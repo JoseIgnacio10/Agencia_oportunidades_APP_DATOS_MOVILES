@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.agenciasoportunidades.ui.screens.EventoFormularioScreen
 import com.example.agenciasoportunidades.ui.screens.EventosScreen
 import com.example.agenciasoportunidades.ui.screens.FormularioScreen
 import com.example.agenciasoportunidades.ui.screens.ListaScreen
@@ -80,6 +81,20 @@ fun AppNavigation() {
             exitTransition = { fadeOut(animationSpec = tween (350))}
         ) {
             EventosScreen(navController, eventoViewModel)
+        }
+
+        composable(
+            route = "evento_formulario",
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(350)) +
+                        fadeIn(animationSpec = tween(350))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(350)) +
+                        fadeOut(animationSpec = tween(350))
+            }
+        ) {
+            EventoFormularioScreen(navController, eventoViewModel)
         }
     }
 }
