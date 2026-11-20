@@ -70,7 +70,7 @@ fun ListaScreen(
                     Column {
                         Text("Oportunidades")
                         sesion.usuarioNombre?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall)
+                            Text("$it · ${sesion.usuarioPerfil.orEmpty()}", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 },
@@ -93,11 +93,13 @@ fun ListaScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { navController.navigate("formulario") },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("Nueva") }
-            )
+            if (sesion.esEjecutivo) {
+                ExtendedFloatingActionButton(
+                    onClick = { navController.navigate("formulario") },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("Nueva") }
+                )
+            }
         }
     ) { padding ->
         Column(

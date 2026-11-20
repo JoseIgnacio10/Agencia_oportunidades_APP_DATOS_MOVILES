@@ -42,16 +42,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.agenciasoportunidades.viewmodel.EventoViewModel
+import com.example.agenciasoportunidades.viewmodel.LoginViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 
 fun EventosScreen(
     navController: NavController,
-    viewModel: EventoViewModel
+    viewModel: EventoViewModel,
+    loginViewModel: LoginViewModel
 ){
     val eventos by viewModel.eventoList.collectAsState()
     val mensajeError by viewModel.mensajeError.collectAsState()
+    val sesion by loginViewModel.estado.collectAsState()
 
     Scaffold(
         topBar = {
@@ -77,14 +80,16 @@ fun EventosScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    viewModel.nuevoEvento()
-                    navController.navigate("evento_formulario")
-                },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("Nuevo evento") }
-            )
+            if (sesion.esSupervisor) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        viewModel.nuevoEvento()
+                        navController.navigate("evento_formulario")
+                    },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("Nuevo evento") }
+                )
+            }
         }
     ) { padding ->
         if (mensajeError != null) {
@@ -134,14 +139,16 @@ fun EventosScreen(
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.weight(1f)
                                 )
-                                IconButton(onClick = {
-                                    viewModel.editarEvento(evento)
-                                    navController.navigate("evento_formulario")
-                                }) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Editar evento")
-                                }
-                                IconButton(onClick = { viewModel.eliminar(evento) }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Eliminar evento", tint = MaterialTheme.colorScheme.error)
+                                if (sesion.esSupervisor) {
+                                    IconButton(onClick = {
+                                        viewModel.editarEvento(evento)
+                                        navController.navigate("evento_formulario")
+                                    }) {
+                                        Icon(Icons.Filled.Edit, contentDescription = "Editar evento")
+                                    }
+                                    IconButton(onClick = { viewModel.eliminar(evento) }) {
+                                        Icon(Icons.Filled.Delete, contentDescription = "Eliminar evento", tint = MaterialTheme.colorScheme.error)
+                                    }
                                 }
                             }
                             AssistChip(onClick = {}, label = { Text(evento.tipo) })

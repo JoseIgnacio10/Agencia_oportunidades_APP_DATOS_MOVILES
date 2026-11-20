@@ -83,7 +83,7 @@ fun AppNavigation() {
             enterTransition = { fadeIn(animationSpec = tween(350))},
             exitTransition = { fadeOut(animationSpec = tween (350))}
         ) {
-            EventosScreen(navController, eventoViewModel)
+            EventosScreen(navController, eventoViewModel, loginViewModel)
         }
 
         composable(

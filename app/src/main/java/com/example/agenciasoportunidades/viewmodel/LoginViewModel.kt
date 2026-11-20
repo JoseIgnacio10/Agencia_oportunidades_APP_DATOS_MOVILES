@@ -75,7 +75,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             val usuario = dao.buscarPorCorreo(a.correo.trim().lowercase())
             if (usuario != null && usuario.clave == a.clave) {
                 _estado.update {
-                    it.copy(usuarioNombre = usuario.nombre, clave = "")
+                    it.copy(usuarioNombre = usuario.nombre, usuarioPerfil = usuario.perfil, clave = "")
                 }
                 onListo()
             } else {
