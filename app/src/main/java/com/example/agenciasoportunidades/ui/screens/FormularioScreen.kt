@@ -100,7 +100,7 @@ private val TIPOS_EVENTO = listOf(
     "Otra instancia relevante"
 )
 
-private object FormatoFecha : VisualTransformation {
+object FormatoFecha : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val digitos = text.text
         val conBarras = buildString {
@@ -459,7 +459,7 @@ fun FotoEvidencia(
 }
 
 @Composable
-private fun SelectorTipoEvento(
+fun SelectorTipoEvento(
     seleccionado: String,
     onSeleccionar: (String) -> Unit
 ) {
