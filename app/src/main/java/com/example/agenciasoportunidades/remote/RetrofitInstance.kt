@@ -11,4 +11,13 @@ object RetrofitInstance {
             .build()
             .create(ApiService::class.java)
     }
+
+
+    val feriadosApi: FeriadoService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://date.nager.at/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(FeriadoService::class.java)
+    }
 }

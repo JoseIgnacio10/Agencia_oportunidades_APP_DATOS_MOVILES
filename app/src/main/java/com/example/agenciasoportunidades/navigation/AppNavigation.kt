@@ -11,11 +11,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.agenciasoportunidades.ui.screens.EventoFormularioScreen
 import com.example.agenciasoportunidades.ui.screens.EventosScreen
+import com.example.agenciasoportunidades.ui.screens.FeriadosScreen
 import com.example.agenciasoportunidades.ui.screens.FormularioScreen
 import com.example.agenciasoportunidades.ui.screens.ListaScreen
 import com.example.agenciasoportunidades.ui.screens.LoginScreen
 import com.example.agenciasoportunidades.ui.screens.QrScannerScreen
 import com.example.agenciasoportunidades.viewmodel.EventoViewModel
+import com.example.agenciasoportunidades.viewmodel.FeriadoViewModel
 import com.example.agenciasoportunidades.viewmodel.LoginViewModel
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 
@@ -26,6 +28,7 @@ fun AppNavigation() {
     val loginViewModel: LoginViewModel = viewModel()
     val oportunidadViewModel: OportunidadViewModel = viewModel()
     val eventoViewModel: EventoViewModel = viewModel()
+    val feriadoViewModel: FeriadoViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -95,6 +98,15 @@ fun AppNavigation() {
             }
         ) {
             EventoFormularioScreen(navController, eventoViewModel)
+        }
+
+
+        composable(
+            route = "feriados",
+            enterTransition = { fadeIn(animationSpec = tween(350)) },
+            exitTransition = { fadeOut(animationSpec = tween(350)) }
+        ) {
+            FeriadosScreen(navController, feriadoViewModel)
         }
     }
 }
