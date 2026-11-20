@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.agenciasoportunidades.ui.screens.DetalleScreen
 import com.example.agenciasoportunidades.ui.screens.EventoFormularioScreen
 import com.example.agenciasoportunidades.ui.screens.EventosScreen
 import com.example.agenciasoportunidades.ui.screens.FeriadosScreen
@@ -107,6 +108,20 @@ fun AppNavigation() {
             exitTransition = { fadeOut(animationSpec = tween(350)) }
         ) {
             FeriadosScreen(navController, feriadoViewModel)
+        }
+
+        composable(
+            route = "detalle",
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(350)) +
+                        fadeIn(animationSpec = tween(350))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(350)) +
+                        fadeOut(animationSpec = tween(350))
+            }
+        ) {
+            DetalleScreen(navController, oportunidadViewModel, loginViewModel)
         }
     }
 }

@@ -12,5 +12,6 @@ data class OportunidadEntity(
     val publicoObjetivo: String,
     val ubicacion: String,
     val fecha: String,
-    val fotoPath: String? = null
+    val fotoPath: String? = null,
+    val estado : String = "Pendiente"
 )

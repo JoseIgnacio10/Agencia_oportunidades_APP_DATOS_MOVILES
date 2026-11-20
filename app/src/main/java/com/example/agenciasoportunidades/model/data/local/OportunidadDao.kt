@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,6 +15,9 @@ interface OportunidadDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarOportunidad(oportunidad: OportunidadEntity)
+
+    @Update
+    suspend fun actualizarOportunidad(oportunidad: OportunidadEntity)
 
     @Delete
     suspend fun eliminarOportunidad(oportunidad: OportunidadEntity)

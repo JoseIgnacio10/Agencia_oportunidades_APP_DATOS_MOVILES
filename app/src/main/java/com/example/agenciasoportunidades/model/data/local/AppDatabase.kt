@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [OportunidadEntity::class, UsuarioEntity::class], version = 3)
+@Database(entities = [OportunidadEntity::class, UsuarioEntity::class], version = 4)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun oportunidadDao(): OportunidadDao
     abstract fun usuarioDao(): UsuarioDao
@@ -41,6 +41,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRACION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE oportunidades ADD COLUMN estado TEXT NOT NULL DEFAULT 'Pendiente'")
+            }
+        }
+
         private val precargarUsuario = object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 db.execSQL(INSERTAR_USUARIOS_DEMO)
@@ -54,7 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "agencia_database"
                 )
-                    .addMigrations(MIGRACION_1_2, MIGRACION_2_3)
+                    .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4)
                     .addCallback(precargarUsuario)
                     .build()
                 INSTANCE = instance

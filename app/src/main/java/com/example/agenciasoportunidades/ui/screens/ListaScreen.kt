@@ -156,7 +156,11 @@ fun ListaScreen(
                     items(oportunidades, key = { it.id }) { oportunidad ->
                         OportunidadCard(
                             oportunidad = oportunidad,
-                            onEliminar = { viewModel.eliminar(oportunidad) }
+                            onEliminar = { viewModel.eliminar(oportunidad) },
+                            onVerDetalle = {
+                                viewModel.seleccionar(oportunidad)
+                                navController.navigate("detalle")
+                            }
                         )
                     }
                 }
@@ -168,9 +172,11 @@ fun ListaScreen(
 @Composable
 private fun OportunidadCard(
     oportunidad: OportunidadEntity,
-    onEliminar: () -> Unit
+    onEliminar: () -> Unit,
+    onVerDetalle: () -> Unit
 ) {
     Card(
+        onClick = onVerDetalle,
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -196,6 +202,11 @@ private fun OportunidadCard(
                 }
             }
             AssistChip(onClick = {}, label = { Text(oportunidad.tipoEvento) })
+            Text(
+                text = "Estado: ${oportunidad.estado}",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
             Spacer(Modifier.size(4.dp))
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 DatoConIcono(Icons.Filled.Business, oportunidad.organizacion)

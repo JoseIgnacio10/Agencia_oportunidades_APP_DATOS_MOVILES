@@ -26,6 +26,10 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
 
     val oportunidades: StateFlow<List<OportunidadEntity>> = _oportunidades
 
+    private val _seleccionada = MutableStateFlow<OportunidadEntity?>(null)
+
+    val seleccionada: StateFlow<OportunidadEntity?> = _seleccionada
+
     private val _busqueda = MutableStateFlow("")
 
     val busqueda: StateFlow<String> = _busqueda
@@ -59,7 +63,8 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
                 it.titulo.lowercase().contains(texto) ||
                         it.organizacion.lowercase().contains(texto) ||
                         it.ubicacion.lowercase().contains(texto) ||
-                        it.tipoEvento.lowercase().contains(texto)
+                        it.tipoEvento.lowercase().contains(texto) ||
+                        it.estado.lowercase().contains(texto)
             }
         }
     }
@@ -214,6 +219,19 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
             )
             _estado.value = OportunidadUiState()
             onListo()
+        }
+    }
+
+    fun seleccionar(oportunidad: OportunidadEntity) {
+        _seleccionada.value = oportunidad
+    }
+
+    fun cambiarEstado(estado: String) {
+        val actual = _seleccionada.value ?: return
+        val actualizada = actual.copy(estado = estado)
+        _seleccionada.value = actualizada
+        viewModelScope.launch {
+            dao.actualizarOportunidad(actualizada)
         }
     }
 
