@@ -19,11 +19,13 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,11 +37,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -62,6 +68,25 @@ fun ListaScreen(
     val oportunidades by viewModel.oportunidades.collectAsState()
     val busqueda by viewModel.busqueda.collectAsState()
     val sesion by loginViewModel.estado.collectAsState()
+    val puedeGestionar = sesion.esEjecutivo || sesion.esSupervisor
+    var aEliminar by remember { mutableStateOf<OportunidadEntity?>(null) }
+
+    aEliminar?.let { oportunidad ->
+        AlertDialog(
+            onDismissRequest = { aEliminar = null },
+            title = { Text("Eliminar oportunidad") },
+            text = { Text("¿Seguro que quieres eliminar \"${oportunidad.titulo}\"?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.eliminar(oportunidad)
+                    aEliminar = null
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { aEliminar = null }) { Text("Cancelar") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -95,7 +120,10 @@ fun ListaScreen(
         floatingActionButton = {
             if (sesion.esEjecutivo) {
                 ExtendedFloatingActionButton(
-                    onClick = { navController.navigate("formulario") },
+                    onClick = {
+                        viewModel.nuevaOportunidad()
+                        navController.navigate("formulario")
+                    },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text("Nueva") }
                 )
@@ -156,7 +184,12 @@ fun ListaScreen(
                     items(oportunidades, key = { it.id }) { oportunidad ->
                         OportunidadCard(
                             oportunidad = oportunidad,
-                            onEliminar = { viewModel.eliminar(oportunidad) },
+                            puedeGestionar = puedeGestionar,
+                            onEditar = {
+                                viewModel.editarOportunidad(oportunidad)
+                                navController.navigate("formulario")
+                            },
+                            onEliminar = { aEliminar = oportunidad },
                             onVerDetalle = {
                                 viewModel.seleccionar(oportunidad)
                                 navController.navigate("detalle")
@@ -172,6 +205,8 @@ fun ListaScreen(
 @Composable
 private fun OportunidadCard(
     oportunidad: OportunidadEntity,
+    puedeGestionar: Boolean,
+    onEditar: () -> Unit,
     onEliminar: () -> Unit,
     onVerDetalle: () -> Unit
 ) {
@@ -193,12 +228,17 @@ private fun OportunidadCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onEliminar) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = "Eliminar oportunidad",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                if (puedeGestionar) {
+                    IconButton(onClick = onEditar) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Editar oportunidad")
+                    }
+                    IconButton(onClick = onEliminar) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Eliminar oportunidad",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
             AssistChip(onClick = {}, label = { Text(oportunidad.tipoEvento) })

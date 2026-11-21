@@ -69,6 +69,23 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun nuevaOportunidad() {
+        _estado.value = OportunidadUiState()
+    }
+
+    fun editarOportunidad(oportunidad: OportunidadEntity) {
+        _estado.value = OportunidadUiState(
+            id = oportunidad.id,
+            titulo = oportunidad.titulo,
+            organizacion = oportunidad.organizacion,
+            tipoEvento = oportunidad.tipoEvento,
+            publicoObjetivo = oportunidad.publicoObjetivo,
+            ubicacion = oportunidad.ubicacion,
+            fecha = oportunidad.fecha.filter { it.isDigit() },
+            fotoPath = oportunidad.fotoPath
+        )
+    }
+
     fun onTituloChange(valor: String) {
         _estado.update {
             it.copy(
@@ -205,18 +222,34 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
 
     fun guardar(onListo: () -> Unit) {
         val a = _estado.value
+        val fecha = "${a.fecha.substring(0, 2)}/${a.fecha.substring(2, 4)}/${a.fecha.substring(4)}"
         viewModelScope.launch {
-            dao.insertarOportunidad(
-                OportunidadEntity(
-                    titulo = a.titulo,
-                    organizacion = a.organizacion,
-                    tipoEvento = a.tipoEvento,
-                    publicoObjetivo = a.publicoObjetivo,
-                    ubicacion = a.ubicacion,
-                    fecha = "${a.fecha.substring(0, 2)}/${a.fecha.substring(2, 4)}/${a.fecha.substring(4)}",
-                    fotoPath = a.fotoPath
+            val original = listaCompleta.find { it.id == a.id }
+            if (original == null) {
+                dao.insertarOportunidad(
+                    OportunidadEntity(
+                        titulo = a.titulo,
+                        organizacion = a.organizacion,
+                        tipoEvento = a.tipoEvento,
+                        publicoObjetivo = a.publicoObjetivo,
+                        ubicacion = a.ubicacion,
+                        fecha = fecha,
+                        fotoPath = a.fotoPath
+                    )
                 )
-            )
+            } else {
+                dao.actualizarOportunidad(
+                    original.copy(
+                        titulo = a.titulo,
+                        organizacion = a.organizacion,
+                        tipoEvento = a.tipoEvento,
+                        publicoObjetivo = a.publicoObjetivo,
+                        ubicacion = a.ubicacion,
+                        fecha = fecha,
+                        fotoPath = a.fotoPath
+                    )
+                )
+            }
             _estado.value = OportunidadUiState()
             onListo()
         }

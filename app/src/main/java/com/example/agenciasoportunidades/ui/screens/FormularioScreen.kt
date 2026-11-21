@@ -138,7 +138,7 @@ fun FormularioScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nueva oportunidad") },
+                title = { Text(if (estado.id == null) "Nueva oportunidad" else "Editar oportunidad") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")

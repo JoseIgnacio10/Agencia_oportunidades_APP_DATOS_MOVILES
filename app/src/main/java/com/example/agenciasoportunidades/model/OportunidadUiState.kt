@@ -1,6 +1,7 @@
 package com.example.agenciasoportunidades.model
 
 data class OportunidadUiState(
+    val id: Int? = null,
     val titulo: String = "",
     val organizacion: String = "",
     val tipoEvento: String = "Evento corporativo",
