@@ -10,7 +10,9 @@ data class LoginUiState(
 ) {
     val esEjecutivo: Boolean
         get() = usuarioPerfil == "Ejecutivo comercial"
-
     val esSupervisor: Boolean
         get() = usuarioPerfil == "Supervisor comercial"
+
+    val esActivaciones: Boolean
+        get() = usuarioPerfil == "Gestión de activaciones"
 }

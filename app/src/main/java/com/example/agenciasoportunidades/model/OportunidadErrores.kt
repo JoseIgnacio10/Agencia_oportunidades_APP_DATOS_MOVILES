@@ -5,5 +5,7 @@ data class OportunidadErrores(
     val organizacion: String? = null,
     val publicoObjetivo: String? = null,
     val ubicacion: String? = null,
-    val fecha: String? = null
+    val fecha: String? = null,
+    val contactoNombre: String? = null,
+    val contactoCorreo: String? = null
 )

@@ -9,5 +9,9 @@ data class OportunidadUiState(
     val ubicacion: String = "",
     val fecha: String = "",
     val fotoPath: String? = null,
+    val contactoNombre: String = "",
+    val contactoCargo: String = "",
+    val contactoTelefono: String = "",
+    val contactoCorreo: String = "",
     val errores: OportunidadErrores = OportunidadErrores()
 )
