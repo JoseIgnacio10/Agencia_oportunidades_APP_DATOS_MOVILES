@@ -1,130 +1,98 @@
-# Agencia de Oportunidades - Aplicación Móvil Android
+# Agencia Oportunidades
 
-Aplicación móvil nativa desarrollada en **Kotlin** y **Jetpack Compose** bajo arquitectura **MVVM** para la gestión de perfiles de usuario, postulaciones a oportunidades, eventos y consulta de feriados nacionales.
+App Android para el equipo comercial de una agencia de convenios y beneficios corporativos.
+Permite registrar, buscar y dar seguimiento a oportunidades de activación en eventos corporativos,
+ferias empresariales y actividades municipales, centralizando información que hoy está dispersa
+entre redes sociales, correos y registros personales.
 
----
+Proyecto de la **Evaluación Parcial 2** · DSY1105 Desarrollo de Aplicaciones Móviles · Duoc UC.
 
-## 1. Estructura del Proyecto
+## Integrantes
 
-```text
-Agencias_Oportunidades/
-├── app/
-│   ├── release/
-│   │   └── app-release.apk                  # APK firmado listo para distribución
-│   └── src/
-│       ├── main/
-│       │   └── java/com/example/agenciasoportunidades/
-│       │       ├── model/                   # Modelos de datos y DTOs
-│       │       ├── network/                 # Clientes Retrofit y servicios API
-│       │       ├── ui/
-│       │       │   ├── screens/             # Pantallas Jetpack Compose (Login, Eventos, QR, etc.)
-│       │       │   └── theme/               # Paleta de colores, tipografía y temas
-│       │       ├── viewmodel/               # ViewModels (Login, Evento, Feriado, Oportunidad)
-│       │       └── MainActivity.kt          # Punto de entrada y navegación principal
-│       ├── test/
-│       │   └── java/com/example/agenciasoportunidades/
-│       │       ├── EventoViewModelTest.kt   # Pruebas unitarias de EventoViewModel
-│       │       └── FeriadoViewModelTest.kt  # Pruebas unitarias de FeriadoViewModel
-│       └── androidTest/
-│           └── java/com/example/agenciasoportunidades/
-│               └── EventosScreenTest.kt     # Pruebas de interfaz UI en Compose
-├── Agencia_oportunidades_APP_DATOS_MOVILES-MAIN3.jks  # Llave Keystore de firma
-├── build.gradle.kts                         # Configuración global de Gradle
-├── settings.gradle.kts                      # Configuración de módulos
-└── README.md                                # Documentación del proyecto
+- José Ignacio Zúñiga Zúñiga
+- Marco Leufuman
 
+## Funcionalidades implementadas
 
+- **Login con cuenta ficticia**: validación de correo y clave por campo, aviso si las credenciales son
+  incorrectas, nombre del usuario en la barra superior y botón para cerrar sesión.
+- **Lista de oportunidades** con buscador por título, organización, tipo de evento o ubicación.
+- **Formulario de nueva oportunidad** con validación por campo al guardar: cada error muestra un ícono y
+  un mensaje, y se limpia apenas el usuario corrige el campo.
+- **Tipos de evento del caso**: evento corporativo, feria empresarial, actividad municipal, jornada de
+  beneficios, feria institucional, actividad de trabajadores, activación comercial y otra instancia.
+- **Persistencia local con Room**: las oportunidades se mantienen al cerrar y volver a abrir la app.
+- **Cámara (recurso nativo 1)**: foto de evidencia del evento, guardada en la carpeta privada de la app
+  y mostrada en el formulario y en la tarjeta de la lista.
+- **Lector QR (recurso nativo 2)**: al escanear el QR del afiche de un evento se autocompleta el formulario.
+- **Permisos**: la cámara se pide en tiempo de ejecución; si el usuario la rechaza, la app lo informa y
+  sigue funcionando.
+- **Navegación con transiciones animadas** entre pantallas.
+- **Animaciones de retroalimentación**: los íconos y mensajes de error aparecen y desaparecen animados.
 
-2. Requisitos del Sistema y Ejecución
-IDE: Android Studio Ladybug / Koala o superior.
-Lenguaje: Kotlin 2.0+ / JDK 17.
-SDK Mínimo (minSdk): API 24 (Android 7.0).
-SDK Objetivo (targetSdk): API 34 / 35.
-Ejecución desde Android Studio:
-Abrir la carpeta raíz del proyecto en Android Studio (Agencias_Oportunidades).
-Esperar a que Gradle sincronice todas las dependencias.
-Encender un emulador en Device Manager (ej. Pixel API 34) o conectar un dispositivo físico con depuración USB.
-Ejecutar la aplicación con Run (Shift + F10).
-3. Arquitectura y Funcionalidades Principales
-El proyecto implementa el patrón arquitectónico MVVM (Model - View - ViewModel) con gestión reactiva de estado mediante StateFlow y UI declarativa en Jetpack Compose:
-Autenticación y Perfil (LoginScreen, LoginViewModel): Inicio de sesión, registro, validación de campos (incluyendo formato de RUT) y manejo de sesión.
-Gestión de Eventos y Oportunidades (EventosScreen, EventoViewModel, OportunidadViewModel): Visualización, registro y administración de eventos y ofertas disponibles.
-Integración con APIs y Microservicios (Retrofit):
-Conexión con microservicio propio para gestión de usuarios, perfiles y eventos.
-Consumo de API externa de feriados (FeriadoViewModel) para consulta de días festivos.
-Lector QR (QrScannerScreen): Escaneo de códigos QR mediante cámara integrada (CameraX / ML Kit) para validación rápida en eventos.
-4. Comandos de Terminal (Compilación y Pruebas)
-Desde la terminal integrada de Android Studio (o terminal del sistema en la raíz del proyecto), se pueden ejecutar los siguientes comandos con Gradle Wrapper (./gradlew):
-Compilar el proyecto completo (incluyendo clases de test):
-Bash
-./gradlew assembleDebug assembleDebugUnitTest assembleDebugAndroidTest
-Ejecutar pruebas unitarias locales (src/test):
-Valida la lógica de negocio y manejo de estados en EventoViewModelTest y FeriadoViewModelTest sobre la JVM sin requerir emulador:
-Bash
-./gradlew testDebugUnitTest
-Ejecutar pruebas de interfaz UI (src/androidTest):
-Valida el renderizado de componentes visuales en EventosScreenTest (requiere tener un emulador encendido o dispositivo Android conectado):
-Bash
-./gradlew connectedDebugAndroidTest
-Generar APK de producción (release) desde terminal:
-Bash
-./gradlew assembleRelease
-5. Artefactos de Distribución (APK Firmado y Keystore)
-El repositorio incluye los archivos necesarios para instalación y verificación de firma:
-Ruta del APK Firmado: app/release/app-release.apk
-Archivo Keystore (.jks): Agencia_oportunidades_APP_DATOS_MOVILES-MAIN3.jks
-Alias de firma: agencia_key
-Contraseña Keystore / Key: agencia2026
+## Arquitectura (MVVM)
 
----
+```
+app/src/main/java/com/example/agenciasoportunidades/
+├── MainActivity.kt
+├── model/
+│   ├── LoginUiState.kt, LoginErrores.kt
+│   ├── OportunidadUiState.kt, OportunidadErrores.kt
+│   └── data/local/   Room: OportunidadEntity, UsuarioEntity, sus DAO y AppDatabase
+├── viewmodel/        LoginViewModel y OportunidadViewModel (validaciones, sesión y acceso a Room)
+├── navigation/       AppNavigation: crea los ViewModels y define las rutas con animaciones
+└── ui/
+    ├── screens/      LoginScreen, ListaScreen, FormularioScreen (cámara) y QrScannerScreen (lector QR)
+    └── theme/        Tema Material 3
+```
 
-### Comandos sugeridos para hacer tus commits por partes en terminal
+Cada pantalla recibe el `navController` y su ViewModel, lee el `estado` y solo avisa las acciones del
+usuario. La validación (`validarFormulario`) y el guardado en Room viven en el ViewModel.
 
-Cuando pegues el `README.md` y verifiques que el `.jks` y el `app-release.apk` estén en sus carpetas, puedes subir todo ordenado por partes con estos comandos:
+## Tecnologías
 
-```bash
-# 1. Subir las pruebas unitarias y de UI
-git add app/src/test/ app/src/androidTest/
-git commit -m "test: agregar pruebas unitarias de ViewModels y test UI de EventosScreen"
+Kotlin · Jetpack Compose · Material 3 · MVVM · Room (con KSP) · Navigation Compose · CameraX ·
+ML Kit Barcode Scanning
 
-# 2. Subir el APK firmado y la llave Keystore
-git add -f app/release/app-release.apk Agencia_oportunidades_APP_DATOS_MOVILES-MAIN3.jks
-git commit -m "build: agregar APK firmado release y archivo keystore .jks"
+## Cómo ejecutar
 
-# 3. Subir el README actualizado
-git add README.md
-git commit -m "docs: actualizar README con estructura, comandos de terminal, tests y firma APK"
+1. Clonar el repositorio:
+   ```
+   git clone https://github.com/JoseIgnacio10/Agencia_oportunidades_APP_DATOS_MOVILES.git
+   ```
+2. Abrir la carpeta en **Android Studio** y esperar a que termine el **Gradle Sync**.
+3. Elegir un emulador o un celular con **Android 7.0 o superior** (API 24) con depuración USB activada.
+4. Pulsar **▶ Run**.
+5. Ingresar con la cuenta de prueba (ficticia):
 
-# 4. Subir todos los commits al repositorio remoto
-git push
+   | Correo | Clave |
+   |---|---|
+   | `ejecutivo@agenciaficticia.cl` | `Agencia2026` |
 
+## Cómo probar el lector QR
 
-Como realizar comandos o pruebas de TEST por terminal 
- Comandos de Terminal (Compilación y Pruebas)
+En [`docs/qr_prueba`](docs/qr_prueba) hay códigos QR de ejemplo con datos ficticios:
 
-Abre la terminal en la raíz del proyecto (`Agencias_Oportunidades`) y ejecuta los comandos según tu sistema operativo:
+| Archivo | Resultado esperado |
+|---|---|
+| `qr_feria_beneficios.png` | Completa todo el formulario |
+| `qr_jornada_salud.png` | Completa todo el formulario con otro evento |
+| `qr_no_es_evento.png` | Muestra "Este QR no corresponde a un evento" |
 
-### 1. Dar permisos de ejecución (solo la primera vez en macOS / Linux):
-```bash
-chmod +x gradlew
-2. Ejecutar pruebas unitarias locales (EventoViewModelTest y FeriadoViewModelTest):
-Corre sobre la JVM local y no requiere emulador encendido:
-macOS / Linux:
-Bash
-./gradlew testDebugUnitTest
-Windows:
-DOS
-gradlew.bat testDebugUnitTest
-3. Ejecutar pruebas de interfaz UI (EventosScreenTest):
-Valida los componentes visuales en Jetpack Compose (requiere tener un emulador encendido o teléfono conectado):
-macOS / Linux:
-Bash
-./gradlew connectedDebugAndroidTest
-Windows:
-DOS
-gradlew.bat connectedDebugAndroidTest
-4. Verificar compilación completa de código y tests:
-Bash
-./gradlew assembleDebug assembleDebugUnitTest assembleDebugAndroidTest
+Abrir una imagen en la pantalla del computador y escanearla con la app desde
+**Nueva → Escanear QR del evento**. Formato que entiende la app (una línea por dato):
 
-Con ese cambio en la sección 4, cualquier persona que descargue tu repositorio (en Mac o en Windows) sabrá exactamente qué comando correr para que los tests funcionen a la primera. Ya puedes pegar el README y tirar tus commits por partes tranquilo.
+```
+titulo=Feria de Beneficios 2026
+organizacion=Municipalidad Ficticia de Puente Alto
+tipo=Feria empresarial
+publico=Trabajadores municipales y sus familias
+ubicacion=Puente Alto, RM
+fecha=15/11/2026
+```
+
+## Organización del trabajo
+
+- Cada funcionalidad se desarrolló en una rama `feature/*` y se unió a `main` mediante Pull Request.
+- Planificación de tareas en Trello: [tablero del proyecto](https://trello.com/b/qd8zFsZx).
+- Todos los nombres, organizaciones y datos usados son **ficticios**, como exige el caso.
