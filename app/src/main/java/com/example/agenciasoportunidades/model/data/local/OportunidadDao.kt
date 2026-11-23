@@ -14,7 +14,7 @@ interface OportunidadDao {
     fun obtenerTodasLasOportunidades(): Flow<List<OportunidadEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarOportunidad(oportunidad: OportunidadEntity)
+    suspend fun insertarOportunidad(oportunidad: OportunidadEntity): Long
 
     @Update
     suspend fun actualizarOportunidad(oportunidad: OportunidadEntity)

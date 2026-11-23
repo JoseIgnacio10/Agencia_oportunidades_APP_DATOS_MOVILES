@@ -7,10 +7,26 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [OportunidadEntity::class, UsuarioEntity::class], version = 4)
+@Database(
+    entities = [
+        OportunidadEntity::class,
+        UsuarioEntity::class,
+        OrganizacionEntity::class,
+        ContactoEntity::class,
+        GestionEntity::class,
+        ActivacionEntity::class,
+        ResultadoEntity::class
+    ],
+    version = 5
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun oportunidadDao(): OportunidadDao
     abstract fun usuarioDao(): UsuarioDao
+    abstract fun organizacionDao(): OrganizacionDao
+    abstract fun contactoDao(): ContactoDao
+    abstract fun gestionDao(): GestionDao
+    abstract fun activacionDao(): ActivacionDao
+    abstract fun resultadoDao(): ResultadoDao
 
     companion object {
         @Volatile
@@ -47,6 +63,45 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRACION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `organizaciones` (" +
+                            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`nombre` TEXT NOT NULL, `rubro` TEXT NOT NULL, `comuna` TEXT NOT NULL)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_organizaciones_nombre` ON `organizaciones` (`nombre`)")
+
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `contactos` (" +
+                            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`oportunidadId` INTEGER NOT NULL, `nombre` TEXT NOT NULL, " +
+                            "`cargo` TEXT NOT NULL, `telefono` TEXT NOT NULL, `correo` TEXT NOT NULL)"
+                )
+
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `gestiones` (" +
+                            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`oportunidadId` INTEGER NOT NULL, `fecha` TEXT NOT NULL, " +
+                            "`tipo` TEXT NOT NULL, `descripcion` TEXT NOT NULL, `usuario` TEXT NOT NULL)"
+                )
+
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `activaciones` (" +
+                            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`oportunidadId` INTEGER NOT NULL, `fecha` TEXT NOT NULL, " +
+                            "`responsable` TEXT NOT NULL, `estado` TEXT NOT NULL)"
+                )
+
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `resultados` (" +
+                            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`activacionId` INTEGER NOT NULL, `asistentesReales` INTEGER NOT NULL, " +
+                            "`leads` INTEGER NOT NULL, `comentario` TEXT NOT NULL)"
+                )
+            }
+        }
+
         private val precargarUsuario = object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 db.execSQL(INSERTAR_USUARIOS_DEMO)
@@ -60,7 +115,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "agencia_database"
                 )
-                    .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4)
+                    .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5)
                     .addCallback(precargarUsuario)
                     .build()
                 INSTANCE = instance
