@@ -30,11 +30,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -46,9 +50,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -81,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
+import com.example.agenciasoportunidades.model.data.local.OrganizacionEntity
 import com.example.agenciasoportunidades.viewmodel.OportunidadViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -133,6 +142,7 @@ fun FormularioScreen(
     viewModel: OportunidadViewModel
 ) {
     val estado by viewModel.estado.collectAsState()
+    val organizaciones by viewModel.organizaciones.collectAsState()
     val capitalizar = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
 
     Scaffold(
@@ -198,33 +208,11 @@ fun FormularioScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
-                value = estado.organizacion,
-                onValueChange = viewModel::onOrganizacionChange,
-                label = { Text("Organización responsable *") },
-                leadingIcon = { Icon(Icons.Filled.Business, contentDescription = null) },
-                trailingIcon = {
-                    AnimatedVisibility(
-                        visible = estado.errores.organizacion != null,
-                        enter = scaleIn() + fadeIn(),
-                        exit = scaleOut() + fadeOut()
-                    ) {
-                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
-                    }
-                },
-                isError = estado.errores.organizacion != null,
-                supportingText = {
-                    AnimatedVisibility(
-                        visible = estado.errores.organizacion != null,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Text(text = estado.errores.organizacion.orEmpty(), color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                keyboardOptions = capitalizar,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            SelectorOrganizacion(
+                valor = estado.organizacion,
+                organizaciones = organizaciones,
+                error = estado.errores.organizacion,
+                onValorChange = viewModel::onOrganizacionChange
             )
 
             SelectorTipoEvento(
@@ -323,6 +311,96 @@ fun FormularioScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Text(
+                text = "Contacto principal",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+
+            OutlinedTextField(
+                value = estado.contactoNombre,
+                onValueChange = viewModel::onContactoNombreChange,
+                label = { Text("Nombre del contacto *") },
+                leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.contactoNombre != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.contactoNombre != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.contactoNombre != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.contactoNombre.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                keyboardOptions = capitalizar,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = estado.contactoCargo,
+                onValueChange = viewModel::onContactoCargoChange,
+                label = { Text("Cargo") },
+                leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
+                keyboardOptions = capitalizar,
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = estado.contactoTelefono,
+                onValueChange = viewModel::onContactoTelefonoChange,
+                label = { Text("Teléfono") },
+                leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = estado.contactoCorreo,
+                onValueChange = viewModel::onContactoCorreoChange,
+                label = { Text("Correo electrónico") },
+                leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
+                trailingIcon = {
+                    AnimatedVisibility(
+                        visible = estado.errores.contactoCorreo != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                isError = estado.errores.contactoCorreo != null,
+                supportingText = {
+                    AnimatedVisibility(
+                        visible = estado.errores.contactoCorreo != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Text(text = estado.errores.contactoCorreo.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             SeccionFoto(
                 fotoPath = estado.fotoPath,
                 onFotoTomada = viewModel::onFotoChange
@@ -343,6 +421,86 @@ fun FormularioScreen(
             ) {
                 Icon(Icons.Filled.Save, contentDescription = null)
                 Text("  Guardar oportunidad")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectorOrganizacion(
+    valor: String,
+    organizaciones: List<OrganizacionEntity>,
+    error: String?,
+    onValorChange: (String) -> Unit
+) {
+    var expandido by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expandido,
+        onExpandedChange = { expandido = !expandido },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = valor,
+            onValueChange = {
+                onValorChange(it)
+                expandido = true
+            },
+            label = { Text("Organización responsable *") },
+            leadingIcon = { Icon(Icons.Filled.Business, contentDescription = null) },
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AnimatedVisibility(
+                        visible = error != null,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                    }
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido)
+                }
+            },
+            isError = error != null,
+            supportingText = {
+                AnimatedVisibility(
+                    visible = error != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Text(text = error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            singleLine = true,
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryEditable)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expandido && organizaciones.isNotEmpty(),
+            onDismissRequest = { expandido = false }
+        ) {
+            organizaciones.forEach { org ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(org.nombre)
+                            if (org.rubro.isNotBlank() || org.comuna.isNotBlank()) {
+                                Text(
+                                    text = listOf(org.rubro, org.comuna).filter { it.isNotBlank() }.joinToString(" - "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        onValorChange(org.nombre)
+                        expandido = false
+                    }
+                )
             }
         }
     }

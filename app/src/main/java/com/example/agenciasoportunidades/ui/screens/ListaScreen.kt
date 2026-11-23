@@ -69,6 +69,11 @@ fun ListaScreen(
     val busqueda by viewModel.busqueda.collectAsState()
     val sesion by loginViewModel.estado.collectAsState()
     val puedeGestionar = sesion.esEjecutivo || sesion.esSupervisor
+    val listaMostrada = if (sesion.esActivaciones) {
+        oportunidades.filter { it.estado == "Confirmada" }
+    } else {
+        oportunidades
+    }
     var aEliminar by remember { mutableStateOf<OportunidadEntity?>(null) }
 
     aEliminar?.let { oportunidad ->
@@ -153,7 +158,7 @@ fun ListaScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            if (oportunidades.isEmpty()) {
+            if (listaMostrada.isEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -169,8 +174,11 @@ fun ListaScreen(
                     )
                     Spacer(Modifier.size(12.dp))
                     Text(
-                        text = if (busqueda.isNotBlank()) "No hay oportunidades que coincidan con la búsqueda"
-                        else "Aún no hay oportunidades registradas.\nPulsa \"Nueva\" para crear la primera.",
+                        text = when {
+                            busqueda.isNotBlank() -> "No hay oportunidades que coincidan con la búsqueda"
+                            sesion.esActivaciones -> "No hay oportunidades confirmadas"
+                            else -> "Aún no hay oportunidades registradas.\nPulsa \"Nueva\" para crear la primera."
+                        },
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -181,7 +189,7 @@ fun ListaScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(oportunidades, key = { it.id }) { oportunidad ->
+                    items(listaMostrada, key = { it.id }) { oportunidad ->
                         OportunidadCard(
                             oportunidad = oportunidad,
                             puedeGestionar = puedeGestionar,
