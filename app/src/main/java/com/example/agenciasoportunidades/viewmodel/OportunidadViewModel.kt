@@ -1,43 +1,72 @@
 package com.example.agenciasoportunidades.viewmodel
 
 import android.app.Application
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.agenciasoportunidades.model.OportunidadErrores
 import com.example.agenciasoportunidades.model.OportunidadUiState
+import com.example.agenciasoportunidades.model.data.local.ActivacionEntity
 import com.example.agenciasoportunidades.model.data.local.AppDatabase
+import com.example.agenciasoportunidades.model.data.local.ContactoEntity
+import com.example.agenciasoportunidades.model.data.local.GestionEntity
 import com.example.agenciasoportunidades.model.data.local.OportunidadEntity
+import com.example.agenciasoportunidades.model.data.local.OrganizacionEntity
+import com.example.agenciasoportunidades.model.data.local.ResultadoEntity
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val dao = AppDatabase.getDatabase(app).oportunidadDao()
+    private val db = AppDatabase.getDatabase(app)
+    private val dao = db.oportunidadDao()
+    private val organizacionDao = db.organizacionDao()
+    private val contactoDao = db.contactoDao()
+    private val gestionDao = db.gestionDao()
+    private val activacionDao = db.activacionDao()
+    private val resultadoDao = db.resultadoDao()
 
     private val _estado = MutableStateFlow(OportunidadUiState())
-
     val estado: StateFlow<OportunidadUiState> = _estado
 
     private val _oportunidades = MutableStateFlow<List<OportunidadEntity>>(emptyList())
-
     val oportunidades: StateFlow<List<OportunidadEntity>> = _oportunidades
 
     private val _seleccionada = MutableStateFlow<OportunidadEntity?>(null)
-
     val seleccionada: StateFlow<OportunidadEntity?> = _seleccionada
 
     private val _busqueda = MutableStateFlow("")
-
     val busqueda: StateFlow<String> = _busqueda
 
+    private val _organizaciones = MutableStateFlow<List<OrganizacionEntity>>(emptyList())
+    val organizaciones: StateFlow<List<OrganizacionEntity>> = _organizaciones
+
+    private val _contactos = MutableStateFlow<List<ContactoEntity>>(emptyList())
+    val contactos: StateFlow<List<ContactoEntity>> = _contactos
+
+    private val _gestiones = MutableStateFlow<List<GestionEntity>>(emptyList())
+    val gestiones: StateFlow<List<GestionEntity>> = _gestiones
+
+    private val _activacion = MutableStateFlow<ActivacionEntity?>(null)
+    val activacion: StateFlow<ActivacionEntity?> = _activacion
+
+    private val _resultado = MutableStateFlow<ResultadoEntity?>(null)
+    val resultado: StateFlow<ResultadoEntity?> = _resultado
+
     private var listaCompleta: List<OportunidadEntity> = emptyList()
+    private var detalleJob: Job? = null
+    private var resultadoJob: Job? = null
 
     init {
         cargarOportunidades()
+        cargarOrganizaciones()
     }
 
     private fun cargarOportunidades() {
@@ -45,6 +74,14 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
             dao.obtenerTodasLasOportunidades().collect { lista ->
                 listaCompleta = lista
                 filtrar()
+            }
+        }
+    }
+
+    private fun cargarOrganizaciones() {
+        viewModelScope.launch {
+            organizacionDao.obtenerTodas().collect { lista ->
+                _organizaciones.value = lista
             }
         }
     }
@@ -74,16 +111,26 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun editarOportunidad(oportunidad: OportunidadEntity) {
-        _estado.value = OportunidadUiState(
-            id = oportunidad.id,
-            titulo = oportunidad.titulo,
-            organizacion = oportunidad.organizacion,
-            tipoEvento = oportunidad.tipoEvento,
-            publicoObjetivo = oportunidad.publicoObjetivo,
-            ubicacion = oportunidad.ubicacion,
-            fecha = oportunidad.fecha.filter { it.isDigit() },
-            fotoPath = oportunidad.fotoPath
-        )
+        viewModelScope.launch {
+            val primerContacto = contactoDao.obtenerPorOportunidad(oportunidad.id)
+                .firstOrNull()
+                ?.firstOrNull()
+
+            _estado.value = OportunidadUiState(
+                id = oportunidad.id,
+                titulo = oportunidad.titulo,
+                organizacion = oportunidad.organizacion,
+                tipoEvento = oportunidad.tipoEvento,
+                publicoObjetivo = oportunidad.publicoObjetivo,
+                ubicacion = oportunidad.ubicacion,
+                fecha = oportunidad.fecha.filter { it.isDigit() },
+                fotoPath = oportunidad.fotoPath,
+                contactoNombre = primerContacto?.nombre ?: "",
+                contactoCargo = primerContacto?.cargo ?: "",
+                contactoTelefono = primerContacto?.telefono ?: "",
+                contactoCorreo = primerContacto?.correo ?: ""
+            )
+        }
     }
 
     fun onTituloChange(valor: String) {
@@ -143,6 +190,36 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun onContactoNombreChange(valor: String) {
+        _estado.update {
+            it.copy(
+                contactoNombre = valor,
+                errores = it.errores.copy(contactoNombre = null)
+            )
+        }
+    }
+
+    fun onContactoCargoChange(valor: String) {
+        _estado.update {
+            it.copy(contactoCargo = valor)
+        }
+    }
+
+    fun onContactoTelefonoChange(valor: String) {
+        _estado.update {
+            it.copy(contactoTelefono = valor)
+        }
+    }
+
+    fun onContactoCorreoChange(valor: String) {
+        _estado.update {
+            it.copy(
+                contactoCorreo = valor,
+                errores = it.errores.copy(contactoCorreo = null)
+            )
+        }
+    }
+
     fun cargarDesdeQr(texto: String): Boolean {
         val datos = texto
             .split('\n', ';')
@@ -195,7 +272,17 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
                 estadoActual.fecha.isBlank() -> "La fecha es obligatoria"
                 !esFechaValida(estadoActual.fecha) -> "Ingresa una fecha válida (dd/mm/aaaa)"
                 else -> null
-            }
+            },
+
+            contactoNombre = if (estadoActual.contactoNombre.isBlank())
+                "El nombre del contacto es obligatorio"
+            else null,
+
+            contactoCorreo = if (estadoActual.contactoCorreo.isNotBlank() &&
+                !Patterns.EMAIL_ADDRESS.matcher(estadoActual.contactoCorreo.trim()).matches()
+            )
+                "Correo de contacto no válido"
+            else null
         )
 
         val hayErrores = listOfNotNull(
@@ -203,7 +290,9 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
             errores.organizacion,
             errores.publicoObjetivo,
             errores.ubicacion,
-            errores.fecha
+            errores.fecha,
+            errores.contactoNombre,
+            errores.contactoCorreo
         ).isNotEmpty()
 
         _estado.update {
@@ -226,7 +315,7 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val original = listaCompleta.find { it.id == a.id }
             if (original == null) {
-                dao.insertarOportunidad(
+                val nuevoId = dao.insertarOportunidad(
                     OportunidadEntity(
                         titulo = a.titulo,
                         organizacion = a.organizacion,
@@ -236,7 +325,19 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
                         fecha = fecha,
                         fotoPath = a.fotoPath
                     )
-                )
+                ).toInt()
+
+                if (a.contactoNombre.isNotBlank() && nuevoId > 0) {
+                    contactoDao.insertar(
+                        ContactoEntity(
+                            oportunidadId = nuevoId,
+                            nombre = a.contactoNombre.trim(),
+                            cargo = a.contactoCargo.trim(),
+                            telefono = a.contactoTelefono.trim(),
+                            correo = a.contactoCorreo.trim()
+                        )
+                    )
+                }
             } else {
                 dao.actualizarOportunidad(
                     original.copy(
@@ -257,6 +358,40 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
 
     fun seleccionar(oportunidad: OportunidadEntity) {
         _seleccionada.value = oportunidad
+        detalleJob?.cancel()
+        resultadoJob?.cancel()
+        _contactos.value = emptyList()
+        _gestiones.value = emptyList()
+        _activacion.value = null
+        _resultado.value = null
+
+        detalleJob = viewModelScope.launch {
+            launch {
+                contactoDao.obtenerPorOportunidad(oportunidad.id).collect {
+                    _contactos.value = it
+                }
+            }
+            launch {
+                gestionDao.obtenerPorOportunidad(oportunidad.id).collect {
+                    _gestiones.value = it
+                }
+            }
+            launch {
+                activacionDao.obtenerPorOportunidad(oportunidad.id).collect { act ->
+                    _activacion.value = act
+                    resultadoJob?.cancel()
+                    if (act != null) {
+                        resultadoJob = viewModelScope.launch {
+                            resultadoDao.obtenerPorActivacion(act.id).collect {
+                                _resultado.value = it
+                            }
+                        }
+                    } else {
+                        _resultado.value = null
+                    }
+                }
+            }
+        }
     }
 
     fun cambiarEstado(estado: String) {
@@ -272,5 +407,67 @@ class OportunidadViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             dao.eliminarOportunidad(oportunidad)
         }
+    }
+
+    fun registrarGestion(tipo: String, descripcion: String, usuario: String): Boolean {
+        val oportunidadActual = _seleccionada.value ?: return false
+        if (descripcion.isBlank()) return false
+        val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+        viewModelScope.launch {
+            gestionDao.insertar(
+                GestionEntity(
+                    oportunidadId = oportunidadActual.id,
+                    fecha = fechaHoy,
+                    tipo = tipo.trim(),
+                    descripcion = descripcion.trim(),
+                    usuario = usuario.trim()
+                )
+            )
+        }
+        return true
+    }
+
+    fun programarActivacion(fecha: String, responsable: String): Boolean {
+        val oportunidadActual = _seleccionada.value ?: return false
+        val digitos = fecha.filter { it.isDigit() }
+        if (!esFechaValida(digitos) || responsable.isBlank()) return false
+        val fechaFormateada = "${digitos.substring(0, 2)}/${digitos.substring(2, 4)}/${digitos.substring(4)}"
+        viewModelScope.launch {
+            activacionDao.insertar(
+                ActivacionEntity(
+                    oportunidadId = oportunidadActual.id,
+                    fecha = fechaFormateada,
+                    responsable = responsable.trim(),
+                    estado = "Programada"
+                )
+            )
+        }
+        return true
+    }
+
+    fun marcarActivacionRealizada() {
+        val actual = _activacion.value ?: return
+        viewModelScope.launch {
+            activacionDao.actualizar(actual.copy(estado = "Realizada"))
+        }
+    }
+
+    fun registrarResultado(asistentes: String, leads: String, comentario: String): Boolean {
+        val activacionActual = _activacion.value ?: return false
+        if (activacionActual.estado != "Realizada") return false
+        val asistentesNum = asistentes.trim().toIntOrNull() ?: return false
+        val leadsNum = leads.trim().toIntOrNull() ?: return false
+        if (asistentesNum < 0 || leadsNum < 0) return false
+        viewModelScope.launch {
+            resultadoDao.insertar(
+                ResultadoEntity(
+                    activacionId = activacionActual.id,
+                    asistentesReales = asistentesNum,
+                    leads = leadsNum,
+                    comentario = comentario.trim()
+                )
+            )
+        }
+        return true
     }
 }
