@@ -1,98 +1,97 @@
-# Agencia Oportunidades
+Agencia de Oportunidades — Aplicación Móvil Android
 
-App Android para el equipo comercial de una agencia de convenios y beneficios corporativos.
-Permite registrar, buscar y dar seguimiento a oportunidades de activación en eventos corporativos,
-ferias empresariales y actividades municipales, centralizando información que hoy está dispersa
-entre redes sociales, correos y registros personales.
+Aplicación móvil nativa desarrollada en **Kotlin** y **Jetpack Compose** bajo la arquitectura **MVVM**, diseñada para la gestión, consulta y acreditación mediante códigos QR de eventos, organizaciones y feriados legales, integrando consumo de **microservicios REST** y **persistencia local offline**.
 
-Proyecto de la **Evaluación Parcial 2** · DSY1105 Desarrollo de Aplicaciones Móviles · Duoc UC.
+---
 
-## Integrantes
+##  Enlaces del Proyecto y Gestión Ágil
 
-- José Ignacio Zúñiga Zúñiga
-- Marco Leufuman
+* **Repositorio Oficial (Rama Principal):** [GitHub - main](https://github.com/JoseIgnacio10/Agencia_oportunidades_APP_DATOS_MOVILES)
+* **Rama Consolidada (Proyecto Completo):** [GitHub - Proyecto_Completo](https://github.com/JoseIgnacio10/Agencia_oportunidades_APP_DATOS_MOVILES/tree/Proyecto_Completo)
+* **Tablero de Seguimiento Ágil (Trello):** [Tablero Trello - Agencia de Oportunidades](https://trello.com/b/lLzRvwK7)
+* **APK Firmado de Producción:** `app/release/app-release.apk`
 
-## Funcionalidades implementadas
+---
 
-- **Login con cuenta ficticia**: validación de correo y clave por campo, aviso si las credenciales son
-  incorrectas, nombre del usuario en la barra superior y botón para cerrar sesión.
-- **Lista de oportunidades** con buscador por título, organización, tipo de evento o ubicación.
-- **Formulario de nueva oportunidad** con validación por campo al guardar: cada error muestra un ícono y
-  un mensaje, y se limpia apenas el usuario corrige el campo.
-- **Tipos de evento del caso**: evento corporativo, feria empresarial, actividad municipal, jornada de
-  beneficios, feria institucional, actividad de trabajadores, activación comercial y otra instancia.
-- **Persistencia local con Room**: las oportunidades se mantienen al cerrar y volver a abrir la app.
-- **Cámara (recurso nativo 1)**: foto de evidencia del evento, guardada en la carpeta privada de la app
-  y mostrada en el formulario y en la tarjeta de la lista.
-- **Lector QR (recurso nativo 2)**: al escanear el QR del afiche de un evento se autocompleta el formulario.
-- **Permisos**: la cámara se pide en tiempo de ejecución; si el usuario la rechaza, la app lo informa y
-  sigue funcionando.
-- **Navegación con transiciones animadas** entre pantallas.
-- **Animaciones de retroalimentación**: los íconos y mensajes de error aparecen y desaparecen animados.
+## Evolución del Proyecto: Diagnóstico Inicial vs. Solución Final
 
-## Arquitectura (MVVM)
+Durante el desarrollo e integración del sistema, se identificaron y resolvieron puntos críticos respecto a las entregas preliminares:
 
-```
-app/src/main/java/com/example/agenciasoportunidades/
-├── MainActivity.kt
-├── model/
-│   ├── LoginUiState.kt, LoginErrores.kt
-│   ├── OportunidadUiState.kt, OportunidadErrores.kt
-│   └── data/local/   Room: OportunidadEntity, UsuarioEntity, sus DAO y AppDatabase
-├── viewmodel/        LoginViewModel y OportunidadViewModel (validaciones, sesión y acceso a Room)
-├── navigation/       AppNavigation: crea los ViewModels y define las rutas con animaciones
-└── ui/
-    ├── screens/      LoginScreen, ListaScreen, FormularioScreen (cámara) y QrScannerScreen (lector QR)
-    └── theme/        Tema Material 3
-```
+| Aspecto Técnico | Estado Inicial (Problemas Detectados) | Solución Implementada (Versión Final) |
+| :--- | :--- | :--- |
+| **Arquitectura** | Lógica mezclada entre vistas y llamadas de datos sin separación clara de capas. | Refactorización integral a patrón **MVVM** (`ui` → `viewmodel` → `repository` → `data`/`remote`). |
+| **Conectividad y Microservicios** | Dependencia total de conexión a internet; fallos o pantallas vacías si el servicio externo no respondía. | Integración de **Retrofit** para microservicios + respaldo automático en base de datos local **Room (SQLite)**. |
+| **Gestión de Estados** | Estados de carga y errores manejados de forma inconsistente en la interfaz. | Uso reactivo de `StateFlow` / `LiveData` y **Kotlin Coroutines** para actualización fluida en Jetpack Compose. |
+| **Calidad y Testing** | Ausencia de validación automatizada sobre la lógica de negocio y renderizado. | Implementación de pruebas unitarias (`ViewModelTest`) y pruebas instrumentadas de UI (`EventosScreenTest`). |
+| **Despliegue y Versionado** | Archivos sin consolidar y compilación solo en modo depuración (`debug`). | Historial limpio en GitHub (commits modulares + rama `Proyecto_Completo`) y generación de **APK firmado (`release`)**. |
 
-Cada pantalla recibe el `navController` y su ViewModel, lee el `estado` y solo avisa las acciones del
-usuario. La validación (`validarFormulario`) y el guardado en Room viven en el ViewModel.
+---
 
-## Tecnologías
+##  Arquitectura de Microservicios y Persistencia Híbrida
 
-Kotlin · Jetpack Compose · Material 3 · MVVM · Room (con KSP) · Navigation Compose · CameraX ·
-ML Kit Barcode Scanning
+La aplicación opera bajo un esquema híbrido (**Online / Offline-First**) que combina servicios distribuidos con almacenamiento local:
 
-## Cómo ejecutar
+1. **Capa de Microservicios (`remote`):**
+   * Comunicación mediante **Retrofit + Gson** hacia los endpoints externos para la obtención de **Eventos**, **Organizaciones**, **Resultados** y consulta a la API pública de **Feriados Legales**.
+2. **Capa de Persistencia Local (`data` / Room Database):**
+   * Base de datos SQLite gestionada por `AppDatabase` con 5 entidades y sus respectivos DAOs (`ActivacionDao`, `ContactoDao`, `GestionDao`, `OrganizacionDao`, `ResultadoDao`) para garantizar operatividad sin conexión.
+3. **Módulo de Acreditación QR:**
+   * Lectura y validación rápida de códigos QR en terreno (con códigos de prueba incluidos en `docs/qr_prueba`).
 
-1. Clonar el repositorio:
-   ```
-   git clone https://github.com/JoseIgnacio10/Agencia_oportunidades_APP_DATOS_MOVILES.git
-   ```
-2. Abrir la carpeta en **Android Studio** y esperar a que termine el **Gradle Sync**.
-3. Elegir un emulador o un celular con **Android 7.0 o superior** (API 24) con depuración USB activada.
-4. Pulsar **▶ Run**.
-5. Ingresar con la cuenta de prueba (ficticia):
+---
 
-   | Correo | Clave |
-   |---|---|
-   | `ejecutivo@agenciaficticia.cl` | `Agencia2026` |
+##  Estructura / Esqueleto del Proyecto
 
-## Cómo probar el lector QR
+```text
+Agencia_oportunidades_APP_DATOS_MOVILES/
+├── app/
+│   ├── release/
+│   │   └── app-release.apk                  # APK firmado listo para instalación
+│   └── src/
+│       ├── main/java/com/example/agenciasoportunidades/
+│       │   ├── data/                        # Base de datos Room (AppDatabase y DAOs)
+│       │   │   ├── ActivacionDao.kt
+│       │   │   ├── ContactoDao.kt
+│       │   │   ├── GestionDao.kt
+│       │   │   ├── OrganizacionDao.kt
+│       │   │   └── ResultadoDao.kt
+│       │   ├── model/                       # Entidades de BD y modelos de dominio
+│       │   ├── navigation/                  # Rutas y grafo de navegación Compose
+│       │   ├── remote/                      # Clientes Retrofit y endpoints de microservicios
+│       │   ├── repository/                  # Mediadores entre API remota y Room local
+│       │   ├── ui/                          # Pantallas Jetpack Compose (Login, Eventos, Feriados, QR)
+│       │   └── viewmodel/                   # Gestión de estados (EventoViewModel, FeriadoViewModel)
+│       ├── test/                            # Pruebas Unitarias (JUnit4 + Coroutines Test)
+│       │   └── .../viewmodel/
+│       │       ├── EventoViewModelTest.kt
+│       │       └── FeriadoViewModelTest.kt
+│       └── androidTest/                     # Pruebas Instrumentadas de Interfaz (Compose UI Test)
+│           └── .../ui/
+│               └── EventosScreenTest.kt
+├── docs/
+│   └── qr_prueba/                           # Códigos QR de ejemplo para validación funcional
+├── gradle/                                  # Configuración de dependencias y Wrapper
+├── build.gradle.kts
+├── settings.gradle.kts
+└── README.md
+Stack Tecnológico
+Lenguaje: Kotlin
+UI Framework: Jetpack Compose (Material Design 3)
+Arquitectura: MVVM + Repository Pattern
+Asincronía: Kotlin Coroutines & StateFlow
+Networking (Microservicios): Retrofit 2 + Gson Converter
+Base de Datos Local: Android Room (SQLite)
+Testing: JUnit 4, Kotlinx Coroutines Test, Compose UI Test
+ Ejecución de Pruebas Automatizadas
+Desde la terminal en la raíz del proyecto, ejecutar:
+Pruebas Unitarias (ViewModels):
+Bash
+./gradlew testDebugUnitTest
+Pruebas Instrumentadas de UI (requiere emulador o dispositivo conectado):
+Bash
+./gradlew connectedDebugAndroidTest
 
-En [`docs/qr_prueba`](docs/qr_prueba) hay códigos QR de ejemplo con datos ficticios:
-
-| Archivo | Resultado esperado |
-|---|---|
-| `qr_feria_beneficios.png` | Completa todo el formulario |
-| `qr_jornada_salud.png` | Completa todo el formulario con otro evento |
-| `qr_no_es_evento.png` | Muestra "Este QR no corresponde a un evento" |
-
-Abrir una imagen en la pantalla del computador y escanearla con la app desde
-**Nueva → Escanear QR del evento**. Formato que entiende la app (una línea por dato):
-
-```
-titulo=Feria de Beneficios 2026
-organizacion=Municipalidad Ficticia de Puente Alto
-tipo=Feria empresarial
-publico=Trabajadores municipales y sus familias
-ubicacion=Puente Alto, RM
-fecha=15/11/2026
-```
-
-## Organización del trabajo
-
-- Cada funcionalidad se desarrolló en una rama `feature/*` y se unió a `main` mediante Pull Request.
-- Planificación de tareas en Trello: [tablero del proyecto](https://trello.com/b/qd8zFsZx).
-- Todos los nombres, organizaciones y datos usados son **ficticios**, como exige el caso.
+### Cómo pegarlo en GitHub:
+1. Ve a tu archivo **`README.md`** en la rama **`main`** y haz clic en el ícono del **lápiz (`Edit this file`)**.
+2. Borra el texto anterior, pega este bloque completo y haz clic en **`Commit changes...`**.
+3. Si quieres que tu rama `Proyecto_Completo` también tenga este `README.md` actualizado, entra a esa rama en GitHub y haz clic en **`Sync fork` -> `Update branch`** (o crea un Pull Request rápido desde `main` hacia `Proyecto_Completo`).
