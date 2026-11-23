@@ -27,8 +27,18 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("agencia-release.jks")
+            storePassword = "Agencia2026Key"
+            keyAlias = "agencia"
+            keyPassword = "Agencia2026Key"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
